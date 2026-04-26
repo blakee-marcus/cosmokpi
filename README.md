@@ -1,36 +1,309 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# cOSmo Employee KPI Dashboard
 
-## Getting Started
+[![CI](https://github.com/blakee-marcus/cosmokpi/actions/workflows/ci.yml/badge.svg)](https://github.com/blakee-marcus/cosmokpi/actions/workflows/ci.yml)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2.4-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.4-149ECA?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Local First](https://img.shields.io/badge/data-localStorage_only-2E69FF)](#privacy-model)
 
-First, run the development server:
+A local-first KPI dashboard for reviewing weekly cOSmo employee KPI CSV exports and generating a Frontline Newsletter-ready KPI table.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+The app is designed for store leadership workflows where employee KPI data should remain in the browser. CSV reports are parsed client-side, saved to `localStorage`, and exported from the dashboard as a PNG for internal newsletter use.
+
+## Purpose
+
+Store leaders need a fast, repeatable way to turn weekly cOSmo exports into useful KPI visibility. This project supports that workflow by giving developers a clear technical foundation for upload validation, local report storage, KPI calculation, dashboard review, and newsletter export generation.
+
+Primary outcomes:
+
+- Convert weekly cOSmo CSV exports into structured local reports.
+- Surface store-level and employee-level KPI performance.
+- Support coaching, follow-up, and celebration through clear data presentation.
+- Generate a clean Frontline Newsletter KPI export without adding cloud storage or external data services.
+
+## Features
+
+- Upload weekly cOSmo employee KPI CSV exports in the browser.
+- Assign a report week manually because cOSmo exports do not include a reliable week/date field.
+- Validate required CSV columns before saving a report.
+- Save weekly reports to browser `localStorage`.
+- Review store-level KPI totals against current goals.
+- Review employee-level KPI performance.
+- Search, sort, and compare weekly performance.
+- Highlight strong performance and coaching opportunities.
+- Export a newsletter-ready PNG table for the Frontline Newsletter KPI section.
+
+## Tech Stack
+
+- Next.js App Router
+- React
+- TypeScript
+- Tailwind CSS 4
+- Browser `localStorage`
+- Browser `canvas` API for PNG export
+- npm with checked-in `package-lock.json`
+
+## Architecture
+
+The app runs as a client-first dashboard. CSV files are parsed in the browser, normalized into typed report data, stored locally, and rendered on the dashboard. The export flow uses browser canvas APIs to generate a PNG from the selected report data.
+
+Current architecture constraints:
+
+- No backend database.
+- No authentication layer.
+- No analytics pipeline.
+- No server-side employee KPI reporting.
+- No external storage for uploaded CSV data.
+- No employee KPI values in URLs, logs, cookies, or deployment output.
+
+Any change to those constraints should be reviewed as a product and architecture decision before implementation.
+
+## Privacy Model
+
+Employee KPI data stays on the device.
+
+- CSV files are parsed in the browser.
+- Weekly report data is saved under `employee-kpi-dashboard:v1` in `localStorage`.
+- Uploaded reports are excluded from GitHub Actions, Vercel, analytics, cookies, URLs, logs, and external services.
+- CI validates source code only.
+
+Keep this model intact unless the product direction intentionally changes. Any cloud persistence, analytics, authentication, or server-side reporting should be treated as a major scope change.
+
+## Project Structure
+
+```text
+app/
+  layout.tsx            Global metadata and app shell
+  page.tsx              Upload-first homepage, CSV parser, validation, localStorage write path
+  dashboard/page.tsx    Dashboard, localStorage read path, KPI calculations, table, PNG export
+  globals.css           Tailwind theme tokens and shared utility classes
+
+.github/
+  workflows/ci.yml      Lint, typecheck, and build gate
+  dependabot.yml        Weekly npm and GitHub Actions updates
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Use the Node version from `.nvmrc` and install dependencies from the lockfile.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+nvm use
+npm ci
+npm run dev
+```
 
-## Learn More
+Open the app locally:
 
-To learn more about Next.js, take a look at the following resources:
+```text
+http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Upload a cOSmo KPI CSV from the homepage. After at least one report is saved locally, open:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```text
+http://localhost:3000/dashboard
+```
 
-## Deploy on Vercel
+## Quality Commands
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm run check
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`npm run check` runs linting, TypeScript validation, and the production Next.js build in the same order used by CI.
+
+## Data Contract
+
+The app currently stores version 1 report data under this key:
+
+```ts
+const STORAGE_KEY = "employee-kpi-dashboard:v1";
+```
+
+Stored reports include:
+
+- Report week
+- Source filename
+- Upload timestamp
+- Store totals
+- Employee rows
+
+Preserve backwards compatibility for existing `version: 1` data if the storage shape changes.
+
+## CSV Contract
+
+Required cOSmo columns:
+
+```ts
+const REQUIRED_COLUMNS = [
+  "name",
+  "storeName",
+  "role",
+  "totalGames",
+  "guests",
+  "replaysSold",
+  "SUEs",
+  "reviewsAsked",
+  "sharedReplay",
+  "afterGamePreviews",
+  "replaysSoldPercent",
+  "suePercent",
+  "reviewsAskedPercent",
+  "sharedReplayPercent",
+  "previewsPercent",
+];
+```
+
+Parser requirements:
+
+- Support standard CSV quoting.
+- Trim headers and cell values.
+- Strip a UTF-8 BOM from the first header.
+- Convert numeric KPI fields to numbers.
+- Treat missing numeric values as `0`.
+- Show clear errors for missing columns or empty employee data.
+- Normalize percentage display when cOSmo sends decimals such as `0.92` instead of `92`.
+
+## KPI Rules
+
+Current goal constants:
+
+```ts
+const KPI_GOALS = {
+  replayPercent: 15,
+  reviewsAskedPercent: 90,
+  sharedReplayPercent: 90,
+  previewsPercent: 90,
+};
+```
+
+Store-level calculations:
+
+```ts
+replayPercent = (replaysSold / guests) * 100;
+reviewsAskedPercent = (reviewsAsked / totalGames) * 100;
+sharedReplayPercent = (sharedReplay / totalGames) * 100;
+previewsPercent = (afterGamePreviews / totalGames) * 100;
+```
+
+Employee rows display the percentage values provided by cOSmo.
+
+Rankings use this minimum sample size:
+
+```ts
+const MINIMUM_GAMES_FOR_RANKING = 5;
+```
+
+This keeps very small samples from dominating the ranking views.
+
+## Frontline Newsletter PNG Export
+
+The dashboard exports a newsletter-ready PNG from the browser.
+
+The export includes:
+
+- Store KPI Performance title
+- Team Member
+- # of Games
+- # of Guests
+- Replay %
+- Review Ask %
+- Preview %
+
+Export rules:
+
+- Team members display by first name.
+- KPI values use goal-based color coding.
+- Shared replay is excluded because the current newsletter table format uses Replay %, Review Ask %, and Preview %.
+- Filenames follow this format:
+
+```text
+flnl-kpi-las-vegas-2026-04-20.png
+```
+
+## CI/CD
+
+GitHub Actions runs on:
+
+- Pull requests
+- Pushes to `main`
+- Manual workflow dispatches
+
+The CI job runs:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Recommended deployment path:
+
+- Use the Vercel GitHub integration.
+- Pull requests create preview deployments.
+- Merges or pushes to `main` create production deployments.
+- GitHub Actions does not need `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID` secrets for this setup.
+
+Recommended branch protection for `main`:
+
+- Require pull requests before merge.
+- Require the GitHub Actions CI check.
+- Require Vercel deployment checks if Vercel exposes them on the repository.
+- Block force pushes.
+
+## Dependency Updates
+
+Dependabot checks npm packages and GitHub Actions weekly.
+
+Updates are grouped by:
+
+- Next.js
+- React
+- Tooling
+- GitHub Actions
+
+## Contributor Notes
+
+Implementation guardrails:
+
+- Keep browser-only APIs inside client components or guard them with `typeof window !== "undefined"`.
+- Do not log full employee rows.
+- Do not place employee KPI data in URLs.
+- Maintain the local-first data model unless the product direction changes.
+- Preserve the manual report week selector unless cOSmo starts exporting a reliable date field.
+- Keep the Frontline Newsletter export format stable while improving dashboard visuals.
+- Prefer small helpers for parsing, formatting, ranking, and exporting.
+- Run `npm run check` before opening a pull request.
+
+## Product Direction
+
+Keep the app focused on weekly KPI review, leadership visibility, and Frontline Newsletter export support.
+
+Recommended additions:
+
+- Better week-to-week comparisons
+- Clearer coaching and celebration indicators
+- Improved empty states and validation messages
+- Stronger export polish
+- Safer local data migration handling
+
+Avoid adding:
+
+- HR-style performance records
+- Payroll logic
+- Cloud sync
+- Authentication
+- Analytics
+- Long-term employee recordkeeping
+- Features that make the tool feel punitive instead of coaching-oriented
+
+## License
+
+Personal/internal portfolio project by Blake Marcus.
+
+This repository references operational workflows from The Escape Game. Keep any future implementation aligned with the local-first privacy model and developer guardrails documented above.

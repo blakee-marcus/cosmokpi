@@ -300,6 +300,7 @@ body {
   justify-content: center;
   min-height: 44px;
   padding: 0.72rem 1.1rem;
+  touch-action: manipulation;
   transition:
     background-color 150ms ease,
     box-shadow 150ms ease,
@@ -335,6 +336,7 @@ body {
   justify-content: center;
   min-height: 44px;
   padding: 0.72rem 1.1rem;
+  touch-action: manipulation;
   transition:
     background-color 150ms ease,
     box-shadow 150ms ease,
@@ -363,4 +365,20 @@ body {
   border-radius: 999px;
   color: var(--cosmo-black);
   font-family: var(--font-body-stack);
+}
+
+.snappy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 520px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

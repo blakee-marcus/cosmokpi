@@ -43,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang='en' className='h-full bg-off-white antialiased'>
       <body className='min-h-dvh overflow-x-hidden bg-off-white font-sans text-cosmo-black'>
+        <a href="#main-content" className="sr-only focus:not-sr-only absolute left-4 top-4 z-50 rounded-md bg-primary-web-red px-4 py-2 text-sm font-bold text-cosmo-white focus:outline-none focus:ring-4 focus:ring-primary-web-red/30">Skip to main content</a>
         <div className='flex min-h-dvh flex-col'>{children}</div>
       </body>
     </html>
