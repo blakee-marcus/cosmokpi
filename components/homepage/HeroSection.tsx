@@ -1,19 +1,19 @@
 const steps = [
   {
     number: '1',
-    text: 'Upload the weekly cOSmo CSV.',
+    text: 'Open cOSmo and go to FLTM Reports.',
     className: 'bg-cosmo-black text-cosmo-white',
     textClassName: 'text-cosmo-white/80',
   },
   {
     number: '2',
-    text: 'Confirm the reporting week.',
+    text: 'Confirm the report date range.',
     className: 'bg-blue text-cosmo-white',
     textClassName: 'text-cosmo-white/90',
   },
   {
     number: '3',
-    text: 'Create a clear team view.',
+    text: 'Click Download CSV from the Game Guides report.',
     className: 'bg-purple text-cosmo-white',
     textClassName: 'text-cosmo-white/90',
   },
@@ -42,16 +42,16 @@ export function HeroSection() {
   return (
     <div className='space-y-8'>
       <div className='font-tag inline-flex rounded-full bg-primary-web-red px-4 py-2 text-sm font-black uppercase text-cosmo-white shadow-[3px_4px_0_0_var(--primary-web-red-dark)]'>
-        TEG KPI Clarity
+        cOSmo CSV Guide
       </div>
 
       <div className='space-y-5'>
         <h1 className='font-display max-w-4xl text-5xl font-black leading-[0.95] text-cosmo-black sm:text-6xl lg:text-7xl'>
-          Use KPI data to lead with clarity.
+          Turn FLTM reports into a clear leadership read.
         </h1>
         <p className='max-w-2xl text-lg font-medium leading-8 text-ink-soft sm:text-xl'>
-          Upload the weekly Game Guide KPI CSV, confirm the report week, and create a local team
-          performance view that supports guest experience, coaching, and FLNL clarity.
+          Download the weekly Game Guide CSV from cOSmo, upload it here, and create a local team
+          performance view that supports guest experience, coaching, celebrations, and FLNL clarity.
         </p>
       </div>
 
@@ -64,8 +64,13 @@ export function HeroSection() {
       <div className='rounded-[28px] border-2 border-cosmo-black/10 bg-cosmo-white p-5 shadow-[5px_6px_0_0_rgba(0,0,0,0.08)]'>
         <p className='font-heading text-xl font-black text-cosmo-black'>Built for Magic + Logic</p>
         <p className='mt-2 max-w-3xl text-sm font-medium leading-6 text-ink-soft'>
-          Use the dashboard to celebrate strong guest-focused behaviors, coach clear next steps,
-          and keep weekly communication concise, brand-focused, and actionable.
+          This dashboard supports weekly reports that run Monday through Sunday. If your cOSmo
+          report uses a different date range, the selected week may not align with the data in your
+          upload.
+        </p>
+        <p className='mt-3 max-w-3xl text-sm font-medium leading-6 text-ink-soft'>
+          Use the dashboard to celebrate strong guest-focused behaviors, identify coaching
+          opportunities, and keep weekly communication concise, brand-focused, and actionable.
         </p>
       </div>
     </div>

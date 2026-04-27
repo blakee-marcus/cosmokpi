@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --color-primary-web-red: #fb2d61;
@@ -49,11 +49,11 @@
   --spacing-2xl: 64px;
   --spacing-3xl: 88px;
   --spacing-4xl: 128px;
-  --typography-font-family-display: "Tenon", sans-serif;
-  --typography-font-family-heading: "Tenon", sans-serif;
-  --typography-font-family-tag: "DM Sans", sans-serif;
-  --typography-font-family-body: "DM Sans", sans-serif;
-  --typography-font-family-body-blog: "Tenon", sans-serif;
+  --typography-font-family-display: 'Tenon', sans-serif;
+  --typography-font-family-heading: 'Tenon', sans-serif;
+  --typography-font-family-tag: 'DM Sans', sans-serif;
+  --typography-font-family-body: 'DM Sans', sans-serif;
+  --typography-font-family-body-blog: 'Tenon', sans-serif;
   --typography-font-size-display-1: 64px;
   --typography-font-size-display-2: 48px;
   --typography-font-size-heading-1: 40px;
@@ -145,12 +145,18 @@
   --warning: #e8c349;
   --danger: #b3261e;
   --ink-soft: #2b2b2b;
-  --font-body-stack: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  --font-heading-stack: "Tenon", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  --font-mono-stack: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    monospace;
+  --font-body-stack:
+    'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading-stack:
+    'Tenon', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono-stack:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  --shadow-teg-button-red: 3px 4px 0 0 var(--primary-web-red-dark);
+  --shadow-teg-button-black: 3px 4px 0 0 var(--cosmo-black);
+  --shadow-teg-card: 5px 6px 0 0 rgba(0, 0, 0, 0.12);
+  --shadow-teg-card-strong: 6px 7px 0 0 rgba(0, 0, 0, 0.16);
+  --shadow-teg-card-soft: 4px 5px 0 0 rgba(0, 0, 0, 0.08);
+  --shadow-teg-card-red: 6px 7px 0 0 var(--primary-web-red-dark);
 }
 
 @media (min-width: 600px) {
@@ -198,7 +204,7 @@
   }
 }
 
-:root[class~="dark"] {
+:root[class~='dark'] {
   --color-cosmo-black: var(--color-white);
   --color-cosmo-white: var(--color-black);
   --color-comic-graphite: var(--color-light-grey);
@@ -210,7 +216,7 @@
   --color-blue: var(--color-baby-kraken);
 }
 
-[class~="fb-light"] {
+[class~='fb-light'] {
   --color-fb-black: var(--color-black);
   --color-fb-white: var(--color-white);
   --color-fb-pink: var(--color-feverish-pink);
@@ -218,7 +224,7 @@
   --color-fb-light-grey: #eaecf5;
 }
 
-[class~="fb-dark"] {
+[class~='fb-dark'] {
   --color-fb-black: var(--color-white);
   --color-fb-white: var(--color-black);
   --color-fb-pink: var(--color-feverish-pink);
@@ -292,7 +298,7 @@ body {
   background: var(--primary-web-red);
   border: 3px solid rgba(104, 8, 31, 0.42);
   border-radius: 999px;
-  box-shadow: 3px 4px 0 0 var(--primary-web-red-dark);
+  box-shadow: var(--shadow-teg-button-red);
   color: var(--cosmo-white);
   display: inline-flex;
   font-family: var(--font-body-stack);
@@ -328,7 +334,7 @@ body {
   background: var(--cosmo-white);
   border: 2px solid var(--cosmo-black);
   border-radius: 999px;
-  box-shadow: 3px 4px 0 0 var(--cosmo-black);
+  box-shadow: var(--shadow-teg-button-black);
   color: var(--cosmo-black);
   display: inline-flex;
   font-family: var(--font-body-stack);
@@ -356,7 +362,32 @@ body {
   background: var(--cosmo-white);
   border: 2px solid rgba(0, 0, 0, 0.12);
   border-radius: 28px;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-teg-card);
+  overflow: visible;
+}
+
+.shadow-teg-card {
+  box-shadow: var(--shadow-teg-card);
+}
+
+.shadow-teg-card-strong {
+  box-shadow: var(--shadow-teg-card-strong);
+}
+
+.shadow-teg-card-soft {
+  box-shadow: var(--shadow-teg-card-soft);
+}
+
+.shadow-teg-button-red {
+  box-shadow: var(--shadow-teg-button-red);
+}
+
+.shadow-teg-button-black {
+  box-shadow: var(--shadow-teg-button-black);
+}
+
+.shadow-teg-card-red {
+  box-shadow: var(--shadow-teg-card-red);
 }
 
 .teg-field {

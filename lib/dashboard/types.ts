@@ -17,18 +17,32 @@ export type EmployeeKpiRow = {
   [key: string]: string | number;
 };
 
+export type KpiSourceFile = {
+  fileName: string;
+  type?: 'game-guide' | 'ges' | 'unknown';
+  importedAt?: string;
+};
+
 export type StoredWeek = {
   id: string;
   weekStart: string;
   weekLabel: string;
+
+  // Legacy single-file support
   fileName: string;
   uploadedAt: string;
+
+  // New multi-file/import metadata support
+  importedAt?: string;
+  sourceFiles?: KpiSourceFile[];
+
   storeName: string;
   totals: {
     employees: number;
     totalGames: number;
     guests: number;
     replaysSold: number;
+    SUEs?: number;
     reviewsAsked: number;
     sharedReplay: number;
     afterGamePreviews: number;

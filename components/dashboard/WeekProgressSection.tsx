@@ -9,22 +9,150 @@ import {
 } from '@/lib/dashboard/metrics';
 import type { StoredWeek, WeekProgressMetric } from '@/lib/dashboard/types';
 
+type WeekProgressSectionProps = Readonly<{
+  selectedWeek: StoredWeek;
+  previousWeek: StoredWeek | null;
+  metrics: WeekProgressMetric[];
+}>;
+
+type SummaryStatProps = Readonly<{
+  label: string;
+  value: number;
+  tone: 'green' | 'yellow' | 'red';
+}>;
+
+type SummaryCardProps = Readonly<{
+  label: string;
+  metric?: WeekProgressMetric;
+  fallback: string;
+}>;
+
+const BORDER_ROW_CLASS = 'border-b-2 border-cosmo-black/5';
+
+function getRowBorderClass(isLastRow: boolean) {
+  return isLastRow ? '' : BORDER_ROW_CLASS;
+}
+
+function SummaryStat({ label, value, tone }: SummaryStatProps) {
+  const toneClass = {
+    green: 'text-kpi-green',
+    yellow: 'text-yellow',
+    red: 'text-kpi-red',
+  }[tone];
+
+  return (
+    <div className='rounded-[16px] border border-cosmo-black/5 bg-cosmo-white p-3'>
+      <p className={`font-display text-2xl font-black ${toneClass}`}>{value}</p>
+      <p className='font-tag text-[11px] font-black uppercase text-ink-soft'>{label}</p>
+    </div>
+  );
+}
+
+function SummaryCard({ label, metric, fallback }: SummaryCardProps) {
+  const status = metric ? getProgressStatus(metric.delta) : null;
+  const pillClass = status ? getProgressClasses(status).pill : 'bg-cosmo-white text-cosmo-black';
+
+  return (
+    <div className='rounded-[18px] border border-cosmo-white/10 bg-cosmo-white/10 p-4'>
+      <p className='font-tag text-xs font-black uppercase text-cosmo-white/60'>{label}</p>
+      <p className='mt-1 font-heading text-lg font-black'>{metric?.label ?? fallback}</p>
+      <p
+        className={`font-tag mt-2 inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${pillClass}`}>
+        {metric ? formatPointDelta(metric.delta) : '0.0 pts'}
+      </p>
+    </div>
+  );
+}
+
+function EmptyProgressState({ storeName }: { storeName: string }) {
+  return (
+    <div className='p-5'>
+      <div className='rounded-[24px] border-2 border-dashed border-cosmo-black/20 bg-cosmo-white p-6'>
+        <p className='font-heading text-xl font-black text-cosmo-black'>No prior week yet</p>
+        <p className='mt-2 max-w-2xl text-sm font-medium leading-6 text-ink-soft'>
+          Add another saved week for {storeName} to compare KPI movement and identify the next
+          leadership follow-up.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ProgressTable({ metrics }: { metrics: WeekProgressMetric[] }) {
+  return (
+    <div className='rounded-[24px] border-2 border-cosmo-black/10 bg-cosmo-white p-0.5'>
+      <div className='overflow-hidden rounded-[21px]'>
+        <div className='overflow-x-auto'>
+          <table className='w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm'>
+            <thead className='bg-blue font-tag text-xs uppercase text-cosmo-white'>
+              <tr>
+                <th className='px-4 py-3 font-black'>KPI</th>
+                <th className='px-4 py-3 font-black'>This week</th>
+                <th className='px-4 py-3 font-black'>Prior</th>
+                <th className='px-4 py-3 font-black'>Change</th>
+                <th className='px-4 py-3 font-black'>Goal</th>
+              </tr>
+            </thead>
+
+            <tbody className='bg-cosmo-white'>
+              {metrics.map((metric, index) => {
+                const status = getProgressStatus(metric.delta);
+                const classes = getProgressClasses(status);
+                const rowBorderClass = getRowBorderClass(index === metrics.length - 1);
+
+                return (
+                  <tr key={metric.label} className='transition-colors hover:bg-comic-fog'>
+                    <td className={`px-4 py-4 ${rowBorderClass}`}>
+                      <p className='font-heading text-base font-black text-cosmo-black'>
+                        {metric.label}
+                      </p>
+                      <p className='mt-1 text-xs font-semibold leading-5 text-ink-soft'>
+                        {metric.detail}
+                      </p>
+                    </td>
+
+                    <td
+                      className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
+                      {formatPercent(metric.value)}
+                    </td>
+
+                    <td
+                      className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
+                      {formatPercent(metric.previousValue)}
+                    </td>
+
+                    <td className={`px-4 py-4 ${rowBorderClass}`}>
+                      <span
+                        className={`font-tag inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${classes.pill}`}>
+                        {formatPointDelta(metric.delta)}
+                      </span>
+                      <p className='mt-2 text-xs font-black text-ink-soft'>
+                        {getProgressLabel(status)}
+                      </p>
+                    </td>
+
+                    <td
+                      className={`px-4 py-4 font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
+                      {formatPercent(metric.goal)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const WeekProgressSection = memo(function WeekProgressSection({
   selectedWeek,
   previousWeek,
   metrics,
-}: {
-  selectedWeek: StoredWeek;
-  previousWeek: StoredWeek | null;
-  metrics: WeekProgressMetric[];
-}) {
+}: WeekProgressSectionProps) {
   const progressSummary = previousWeek ? getProgressSummary(metrics) : null;
-  const strongestGainStatus = progressSummary?.strongestGain
-    ? getProgressStatus(progressSummary.strongestGain.delta)
-    : null;
-  const priorityStatus = progressSummary?.priorityFollowUp
-    ? getProgressStatus(progressSummary.priorityFollowUp.delta)
-    : null;
+  const hasComparison = Boolean(previousWeek && progressSummary);
 
   return (
     <section className='snappy-section rounded-[30px] border-2 border-cosmo-black/10 bg-cosmo-white text-cosmo-black shadow-[6px_7px_0_0_rgba(0,0,0,0.10)]'>
@@ -34,175 +162,75 @@ export const WeekProgressSection = memo(function WeekProgressSection({
             <p className='font-tag text-sm font-black uppercase text-primary-web-red'>
               Week-to-week progress
             </p>
-            <h2 className='font-heading mt-2 text-2xl font-black'>
+
+            <h2 className='mt-2 font-heading text-2xl font-black'>
               {previousWeek
                 ? `${selectedWeek.weekLabel} vs ${previousWeek.weekLabel}`
                 : 'Build the next weekly comparison'}
             </h2>
+
             <p className='mt-1 max-w-3xl text-sm font-medium leading-6 text-ink-soft'>
               {previousWeek
-                ? `A compact readout for ${selectedWeek.storeName} movement across the saved KPI reports.`
-                : `Add another saved week for ${selectedWeek.storeName} to see progress.`}
+                ? `Review ${selectedWeek.storeName} movement across saved KPI reports and identify where leadership follow-through is needed next.`
+                : `Add another saved week for ${selectedWeek.storeName} to unlock KPI movement, trend context, and follow-up priorities.`}
             </p>
           </div>
 
-          {previousWeek && progressSummary ? (
+          {hasComparison ? (
             <div className='grid grid-cols-3 gap-2 text-center sm:min-w-[360px]'>
-              <div className='rounded-[16px] border border-cosmo-black/5 bg-cosmo-white p-3'>
-                <p className='font-display text-2xl font-black text-kpi-green'>
-                  {progressSummary.improvedCount}
-                </p>
-                <p className='font-tag text-[11px] font-black uppercase text-ink-soft'>Improved</p>
-              </div>
-              <div className='rounded-[16px] border border-cosmo-black/5 bg-cosmo-white p-3'>
-                <p className='font-display text-2xl font-black text-[#7A5A00]'>
-                  {progressSummary.steadyCount}
-                </p>
-                <p className='font-tag text-[11px] font-black uppercase text-ink-soft'>Steady</p>
-              </div>
-              <div className='rounded-[16px] border border-cosmo-black/5 bg-cosmo-white p-3'>
-                <p className='font-display text-2xl font-black text-kpi-red'>
-                  {progressSummary.needsFollowUpCount}
-                </p>
-                <p className='font-tag text-[11px] font-black uppercase text-ink-soft'>Follow-up</p>
-              </div>
+              <SummaryStat label='Improved' value={progressSummary.improvedCount} tone='green' />
+              <SummaryStat label='Steady' value={progressSummary.steadyCount} tone='yellow' />
+              <SummaryStat
+                label='Follow-up'
+                value={progressSummary.needsFollowUpCount}
+                tone='red'
+              />
             </div>
           ) : null}
         </div>
       </div>
 
-      {previousWeek ? (
+      {hasComparison ? (
         <div className='grid gap-5 p-5 xl:grid-cols-[0.72fr_1.28fr]'>
-          <div className='rounded-[24px] bg-cosmo-black p-5 text-cosmo-white shadow-[5px_6px_0_0_rgba(0,0,0,0.14)]'>
-            <p className='font-tag text-sm font-black uppercase text-cosmo-white/70'>Quick read</p>
-            <p className='font-display mt-3 text-4xl font-black'>
-              {progressSummary?.improvedCount ?? 0} of {metrics.length}
-            </p>
-            <p className='mt-2 text-sm font-semibold leading-6 text-cosmo-white/80'>
-              store KPIs improved compared with the prior saved week.
-            </p>
+          <aside className='relative h-full min-w-0 rounded-[28px]'>
+            <div
+              aria-hidden='true'
+              className='absolute inset-0 translate-x-[5px] translate-y-[6px] rounded-[28px] bg-cosmo-black/15'
+            />
 
-            <div className='mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1'>
-              <div className='rounded-[18px] border border-cosmo-white/10 bg-cosmo-white/10 p-4'>
-                <p className='font-tag text-xs font-black uppercase text-cosmo-white/60'>
-                  Strongest gain
-                </p>
-                <p className='mt-1 font-heading text-lg font-black'>
-                  {progressSummary?.strongestGain?.label ?? 'No gain yet'}
-                </p>
-                <p
-                  className={`font-tag mt-2 inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${
-                    strongestGainStatus
-                      ? getProgressClasses(strongestGainStatus).pill
-                      : 'bg-cosmo-white text-cosmo-black'
-                  }`}>
-                  {progressSummary?.strongestGain
-                    ? formatPointDelta(progressSummary.strongestGain.delta)
-                    : '0.0 pts'}
-                </p>
-              </div>
+            <div className='relative h-full overflow-hidden rounded-[28px] bg-cosmo-black p-5 text-cosmo-white'>
+              <p className='font-tag text-sm font-black uppercase text-cosmo-white/70'>
+                Leadership read
+              </p>
 
-              <div className='rounded-[18px] border border-cosmo-white/10 bg-cosmo-white/10 p-4'>
-                <p className='font-tag text-xs font-black uppercase text-cosmo-white/60'>
-                  Priority follow-up
-                </p>
-                <p className='mt-1 font-heading text-lg font-black'>
-                  {progressSummary?.priorityFollowUp?.label ?? 'No follow-up yet'}
-                </p>
-                <p
-                  className={`font-tag mt-2 inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${
-                    priorityStatus
-                      ? getProgressClasses(priorityStatus).pill
-                      : 'bg-cosmo-white text-cosmo-black'
-                  }`}>
-                  {progressSummary?.priorityFollowUp
-                    ? formatPointDelta(progressSummary.priorityFollowUp.delta)
-                    : '0.0 pts'}
-                </p>
+              <p className='mt-3 font-display text-4xl font-black'>
+                {progressSummary.improvedCount} of {metrics.length}
+              </p>
+
+              <p className='mt-2 text-sm font-semibold leading-6 text-cosmo-white/80'>
+                store KPIs improved compared with the prior saved week.
+              </p>
+
+              <div className='mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1'>
+                <SummaryCard
+                  label='Strongest gain'
+                  metric={progressSummary.strongestGain}
+                  fallback='No gain yet'
+                />
+
+                <SummaryCard
+                  label='Priority follow-up'
+                  metric={progressSummary.priorityFollowUp}
+                  fallback='No follow-up yet'
+                />
               </div>
             </div>
-          </div>
+          </aside>
 
-          <div className='rounded-[24px] border-2 border-cosmo-black/10 bg-cosmo-white p-0.5'>
-            <div className='overflow-hidden rounded-[21px]'>
-              <div className='overflow-x-auto'>
-                <table className='w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm'>
-                  <thead className='font-tag bg-blue text-xs uppercase text-cosmo-white'>
-                    <tr>
-                      <th className='px-4 py-3 font-black'>KPI</th>
-                      <th className='px-4 py-3 font-black'>This week</th>
-                      <th className='px-4 py-3 font-black'>Prior</th>
-                      <th className='px-4 py-3 font-black'>Change</th>
-                      <th className='px-4 py-3 font-black'>Goal</th>
-                    </tr>
-                  </thead>
-                  <tbody className='bg-cosmo-white'>
-                    {metrics.map((metric, index) => {
-                      const status = getProgressStatus(metric.delta);
-                      const classes = getProgressClasses(status);
-                      const isLastRow = index === metrics.length - 1;
-
-                      return (
-                        <tr key={metric.label} className='transition hover:bg-comic-fog'>
-                          <td
-                            className={`px-4 py-4 ${
-                              isLastRow ? '' : 'border-b-2 border-cosmo-black/5'
-                            }`}>
-                            <p className='font-heading text-base font-black text-cosmo-black'>
-                              {metric.label}
-                            </p>
-                            <p className='mt-1 text-xs font-semibold leading-5 text-ink-soft'>
-                              {metric.detail}
-                            </p>
-                          </td>
-                          <td
-                            className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${
-                              isLastRow ? '' : 'border-b-2 border-cosmo-black/5'
-                            }`}>
-                            {formatPercent(metric.value)}
-                          </td>
-                          <td
-                            className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${
-                              isLastRow ? '' : 'border-b-2 border-cosmo-black/5'
-                            }`}>
-                            {formatPercent(metric.previousValue)}
-                          </td>
-                          <td
-                            className={`px-4 py-4 ${
-                              isLastRow ? '' : 'border-b-2 border-cosmo-black/5'
-                            }`}>
-                            <span
-                              className={`font-tag inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${classes.pill}`}>
-                              {formatPointDelta(metric.delta)}
-                            </span>
-                            <p className='mt-2 text-xs font-black text-ink-soft'>
-                              {getProgressLabel(status)}
-                            </p>
-                          </td>
-                          <td
-                            className={`px-4 py-4 font-black tabular-nums text-cosmo-black ${
-                              isLastRow ? '' : 'border-b-2 border-cosmo-black/5'
-                            }`}>
-                            {formatPercent(metric.goal)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <ProgressTable metrics={metrics} />
         </div>
       ) : (
-        <div className='p-5'>
-          <div className='rounded-[24px] border-2 border-dashed border-cosmo-black/20 bg-cosmo-white p-6'>
-            <p className='font-heading text-xl font-black text-cosmo-black'>No prior week yet</p>
-            <p className='mt-2 max-w-2xl text-sm font-medium leading-6 text-ink-soft'>
-              Add another saved week for this store to see progress.
-            </p>
-          </div>
-        </div>
+        <EmptyProgressState storeName={selectedWeek.storeName} />
       )}
     </section>
   );

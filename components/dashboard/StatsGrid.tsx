@@ -4,13 +4,14 @@ import { SmallStatCard } from './SmallStatCard';
 
 export function StatsGrid({ selectedWeek }: { selectedWeek: StoredWeek }) {
   const importedAt = selectedWeek.importedAt ?? selectedWeek.uploadedAt;
+
   const sourceFileDateLabel = importedAt
     ? shortDateFormatter.format(new Date(importedAt))
     : 'Unknown';
 
   const sourceFileLabel =
-    selectedWeek.sourceFiles?.map((file) => file.fileName).join(', ') ||
-    selectedWeek.fileName ||
+    selectedWeek.sourceFiles?.map(({ fileName }) => fileName).join(', ') ??
+    selectedWeek.fileName ??
     'No source file listed';
 
   return (
@@ -20,16 +21,19 @@ export function StatsGrid({ selectedWeek }: { selectedWeek: StoredWeek }) {
         value={formatNumber(selectedWeek.totals.employees)}
         detail='Included in this uploaded report'
       />
+
       <SmallStatCard
         label='Games hosted'
         value={formatNumber(selectedWeek.totals.totalGames)}
         detail='Total games connected to this week'
       />
+
       <SmallStatCard
         label='Guests served'
         value={formatNumber(selectedWeek.totals.guests)}
         detail='Guest volume represented in the KPI rows'
       />
+
       <SmallStatCard label='Source file' value={sourceFileDateLabel} detail={sourceFileLabel} />
     </section>
   );

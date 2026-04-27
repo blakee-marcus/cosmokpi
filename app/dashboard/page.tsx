@@ -1,6 +1,7 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState, useSyncExternalStore } from 'react';
+import type { ChangeEventHandler } from 'react';
+import { useCallback, useDeferredValue, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { EmployeeKpiTable } from '@/components/dashboard/EmployeeKpiTable';
@@ -22,78 +23,110 @@ import { exportWeekForNewsletter } from '@/lib/dashboard/newsletter-export';
 import { getStorageSnapshot, subscribeToStorage } from '@/lib/dashboard/storage';
 import type { EmployeeKpiRow, KpiCard, SortKey } from '@/lib/dashboard/types';
 
+type StoredDashboardWeek = (typeof EMPTY_STORAGE)['weeks'][number];
+
+const DEFAULT_SORT_KEY: SortKey = 'replaysSoldPercent';
+
+function getSelectedWeek(
+  weeks: StoredDashboardWeek[],
+  selectedWeekId: string,
+  latestWeekId: string,
+) {
+  const activeWeekId = selectedWeekId || latestWeekId || weeks[0]?.id || '';
+
+  return weeks.find((week) => week.id === activeWeekId) ?? weeks[0] ?? null;
+}
+
+function buildPreviousEmployeeMap(previousWeek: StoredDashboardWeek | null) {
+  const employeesByKey = new Map<string, EmployeeKpiRow>();
+
+  previousWeek?.employees.forEach((employee) => {
+    employeesByKey.set(getEmployeeComparisonKey(employee), employee);
+  });
+
+  return employeesByKey;
+}
+
+function getSortValue(employee: EmployeeKpiRow, sortKey: SortKey) {
+  const value = Number(employee[sortKey]);
+
+  return sortKey.endsWith('Percent') ? normalizePercent(value) : value;
+}
+
+function rankEmployees(employees: EmployeeKpiRow[], sortKey: SortKey) {
+  return [...employees]
+    .filter((employee) => Number(employee.totalGames) >= MINIMUM_GAMES_FOR_RANKING)
+    .sort((a, b) => {
+      if (sortKey === 'name') {
+        return String(a.name).localeCompare(String(b.name));
+      }
+
+      return getSortValue(b, sortKey) - getSortValue(a, sortKey);
+    });
+}
+
+function filterEmployees(employees: EmployeeKpiRow[], searchTerm: string) {
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+
+  if (!normalizedSearchTerm) {
+    return employees;
+  }
+
+  return employees.filter((employee) =>
+    [employee.name, employee.role, employee.storeName]
+      .join(' ')
+      .toLowerCase()
+      .includes(normalizedSearchTerm),
+  );
+}
+
 export default function DashboardPage() {
   const storage = useSyncExternalStore(subscribeToStorage, getStorageSnapshot, () => EMPTY_STORAGE);
-  const [selectedWeekId, setSelectedWeekId] = useState<string>('');
+
+  const [selectedWeekId, setSelectedWeekId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('replaysSoldPercent');
+  const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
+
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
-  const selectedWeek = useMemo(() => {
-    const activeWeekId = selectedWeekId || storage.latestWeekId || storage.weeks[0]?.id || '';
-    return storage.weeks.find((week) => week.id === activeWeekId) ?? storage.weeks[0] ?? null;
-  }, [selectedWeekId, storage.latestWeekId, storage.weeks]);
+  const selectedWeek = useMemo(
+    () => getSelectedWeek(storage.weeks, selectedWeekId, storage.latestWeekId),
+    [selectedWeekId, storage.latestWeekId, storage.weeks],
+  );
 
   const previousWeek = useMemo(() => {
     if (!selectedWeek) return null;
+
     return findPreviousWeekForStore(storage.weeks, selectedWeek);
   }, [selectedWeek, storage.weeks]);
 
+  const dashboardMetrics = useMemo<KpiCard[]>(() => {
+    if (!selectedWeek) return [];
+
+    return buildDashboardMetrics(selectedWeek);
+  }, [selectedWeek]);
+
   const weekProgressMetrics = useMemo(() => {
     if (!selectedWeek || !previousWeek) return [];
+
     return buildWeekProgressMetrics(selectedWeek, previousWeek);
   }, [previousWeek, selectedWeek]);
 
-  const previousEmployeeByKey = useMemo(() => {
-    const employeesByKey = new Map<string, EmployeeKpiRow>();
-
-    if (!previousWeek) {
-      return employeesByKey;
-    }
-
-    previousWeek.employees.forEach((employee) => {
-      employeesByKey.set(getEmployeeComparisonKey(employee), employee);
-    });
-
-    return employeesByKey;
-  }, [previousWeek]);
-
-  const dashboardMetrics = useMemo<KpiCard[]>(() => {
-    if (!selectedWeek) return [];
-    return buildDashboardMetrics(selectedWeek);
-  }, [selectedWeek]);
+  const previousEmployeeByKey = useMemo(
+    () => buildPreviousEmployeeMap(previousWeek),
+    [previousWeek],
+  );
 
   const rankedEmployees = useMemo(() => {
     if (!selectedWeek) return [];
 
-    return [...selectedWeek.employees]
-      .filter((employee) => Number(employee.totalGames) >= MINIMUM_GAMES_FOR_RANKING)
-      .sort((a, b) => {
-        if (sortKey === 'name') {
-          return String(a.name).localeCompare(String(b.name));
-        }
-
-        const aValue = Number(a[sortKey]);
-        const bValue = Number(b[sortKey]);
-        return (
-          (sortKey.endsWith('Percent') ? normalizePercent(bValue) : bValue) -
-          (sortKey.endsWith('Percent') ? normalizePercent(aValue) : aValue)
-        );
-      });
+    return rankEmployees(selectedWeek.employees, sortKey);
   }, [selectedWeek, sortKey]);
 
-  const filteredEmployees = useMemo(() => {
-    const term = deferredSearchTerm.trim().toLowerCase();
-
-    return rankedEmployees.filter((employee) => {
-      if (!term) return true;
-
-      return [employee.name, employee.role, employee.storeName]
-        .join(' ')
-        .toLowerCase()
-        .includes(term);
-    });
-  }, [deferredSearchTerm, rankedEmployees]);
+  const filteredEmployees = useMemo(
+    () => filterEmployees(rankedEmployees, deferredSearchTerm),
+    [deferredSearchTerm, rankedEmployees],
+  );
 
   const spotlightEmployees = useMemo(
     () => ({
@@ -104,6 +137,22 @@ export default function DashboardPage() {
     [rankedEmployees],
   );
 
+  const handleWeekChange = useCallback((nextWeekId: string) => {
+    setSelectedWeekId(nextWeekId);
+    setSearchTerm('');
+    setSortKey(DEFAULT_SORT_KEY);
+  }, []);
+
+  const handleSearchTermChange = useCallback<ChangeEventHandler<HTMLInputElement>>((event) => {
+    setSearchTerm(event.target.value);
+  }, []);
+
+  const handleExportSelectedWeek = useCallback(() => {
+    if (!selectedWeek) return;
+
+    exportWeekForNewsletter(selectedWeek);
+  }, [selectedWeek]);
+
   if (!selectedWeek) {
     return <EmptyDashboardState />;
   }
@@ -112,12 +161,14 @@ export default function DashboardPage() {
     <main
       id='main-content'
       className='min-h-dvh bg-off-white px-5 py-6 text-cosmo-black sm:px-8 lg:px-14'>
-      <section className='mx-auto w-full max-w-[1440px] space-y-8'>
+      <section
+        aria-label='Weekly KPI dashboard'
+        className='mx-auto w-full max-w-[1440px] space-y-8'>
         <DashboardHeader
           selectedWeek={selectedWeek}
           weeks={storage.weeks}
-          onWeekChange={setSelectedWeekId}
-          onExportSelectedWeek={() => exportWeekForNewsletter(selectedWeek)}
+          onWeekChange={handleWeekChange}
+          onExportSelectedWeek={handleExportSelectedWeek}
         />
 
         <StatsGrid selectedWeek={selectedWeek} />
@@ -142,7 +193,7 @@ export default function DashboardPage() {
           previousWeek={previousWeek}
           searchTerm={searchTerm}
           sortKey={sortKey}
-          onSearchTermChange={setSearchTerm}
+          onSearchTermChange={handleSearchTermChange}
           onSortKeyChange={setSortKey}
         />
       </section>
