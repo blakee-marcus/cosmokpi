@@ -15,6 +15,8 @@ type WeekProgressSectionProps = Readonly<{
   metrics: WeekProgressMetric[];
 }>;
 
+type ProgressSummary = NonNullable<ReturnType<typeof getProgressSummary>>;
+
 type SummaryStatProps = Readonly<{
   label: string;
   value: number;
@@ -23,8 +25,17 @@ type SummaryStatProps = Readonly<{
 
 type SummaryCardProps = Readonly<{
   label: string;
-  metric?: WeekProgressMetric;
+  metric?: WeekProgressMetric | null;
   fallback: string;
+}>;
+
+type ProgressSummaryStatsProps = Readonly<{
+  progressSummary: ProgressSummary;
+}>;
+
+type ProgressComparisonPanelProps = Readonly<{
+  metrics: WeekProgressMetric[];
+  progressSummary: ProgressSummary;
 }>;
 
 const BORDER_ROW_CLASS = 'border-b-2 border-cosmo-black/5';
@@ -60,6 +71,16 @@ function SummaryCard({ label, metric, fallback }: SummaryCardProps) {
         className={`font-tag mt-2 inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${pillClass}`}>
         {metric ? formatPointDelta(metric.delta) : '0.0 pts'}
       </p>
+    </div>
+  );
+}
+
+function ProgressSummaryStats({ progressSummary }: ProgressSummaryStatsProps) {
+  return (
+    <div className='grid grid-cols-3 gap-2 text-center sm:min-w-[360px]'>
+      <SummaryStat label='Improved' value={progressSummary.improvedCount} tone='green' />
+      <SummaryStat label='Steady' value={progressSummary.steadyCount} tone='yellow' />
+      <SummaryStat label='Follow-up' value={progressSummary.needsFollowUpCount} tone='red' />
     </div>
   );
 }
@@ -146,13 +167,55 @@ function ProgressTable({ metrics }: { metrics: WeekProgressMetric[] }) {
   );
 }
 
+function ProgressComparisonPanel({ metrics, progressSummary }: ProgressComparisonPanelProps) {
+  return (
+    <div className='grid gap-5 p-5 xl:grid-cols-[0.72fr_1.28fr]'>
+      <aside className='relative h-full min-w-0 rounded-[28px]'>
+        <div
+          aria-hidden='true'
+          className='absolute inset-0 translate-x-[5px] translate-y-[6px] rounded-[28px] bg-cosmo-black/15'
+        />
+
+        <div className='relative h-full overflow-hidden rounded-[28px] bg-cosmo-black p-5 text-cosmo-white'>
+          <p className='font-tag text-sm font-black uppercase text-cosmo-white/70'>
+            Leadership read
+          </p>
+
+          <p className='mt-3 font-display text-4xl font-black'>
+            {progressSummary.improvedCount} of {metrics.length}
+          </p>
+
+          <p className='mt-2 text-sm font-semibold leading-6 text-cosmo-white/80'>
+            store KPIs improved compared with the prior saved week.
+          </p>
+
+          <div className='mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1'>
+            <SummaryCard
+              label='Strongest gain'
+              metric={progressSummary.strongestGain}
+              fallback='No gain yet'
+            />
+
+            <SummaryCard
+              label='Priority follow-up'
+              metric={progressSummary.priorityFollowUp}
+              fallback='No follow-up yet'
+            />
+          </div>
+        </div>
+      </aside>
+
+      <ProgressTable metrics={metrics} />
+    </div>
+  );
+}
+
 export const WeekProgressSection = memo(function WeekProgressSection({
   selectedWeek,
   previousWeek,
   metrics,
 }: WeekProgressSectionProps) {
   const progressSummary = previousWeek ? getProgressSummary(metrics) : null;
-  const hasComparison = Boolean(previousWeek && progressSummary);
 
   return (
     <section className='snappy-section rounded-[30px] border-2 border-cosmo-black/10 bg-cosmo-white text-cosmo-black shadow-[6px_7px_0_0_rgba(0,0,0,0.10)]'>
@@ -176,59 +239,12 @@ export const WeekProgressSection = memo(function WeekProgressSection({
             </p>
           </div>
 
-          {hasComparison ? (
-            <div className='grid grid-cols-3 gap-2 text-center sm:min-w-[360px]'>
-              <SummaryStat label='Improved' value={progressSummary.improvedCount} tone='green' />
-              <SummaryStat label='Steady' value={progressSummary.steadyCount} tone='yellow' />
-              <SummaryStat
-                label='Follow-up'
-                value={progressSummary.needsFollowUpCount}
-                tone='red'
-              />
-            </div>
-          ) : null}
+          {progressSummary ? <ProgressSummaryStats progressSummary={progressSummary} /> : null}
         </div>
       </div>
 
-      {hasComparison ? (
-        <div className='grid gap-5 p-5 xl:grid-cols-[0.72fr_1.28fr]'>
-          <aside className='relative h-full min-w-0 rounded-[28px]'>
-            <div
-              aria-hidden='true'
-              className='absolute inset-0 translate-x-[5px] translate-y-[6px] rounded-[28px] bg-cosmo-black/15'
-            />
-
-            <div className='relative h-full overflow-hidden rounded-[28px] bg-cosmo-black p-5 text-cosmo-white'>
-              <p className='font-tag text-sm font-black uppercase text-cosmo-white/70'>
-                Leadership read
-              </p>
-
-              <p className='mt-3 font-display text-4xl font-black'>
-                {progressSummary.improvedCount} of {metrics.length}
-              </p>
-
-              <p className='mt-2 text-sm font-semibold leading-6 text-cosmo-white/80'>
-                store KPIs improved compared with the prior saved week.
-              </p>
-
-              <div className='mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1'>
-                <SummaryCard
-                  label='Strongest gain'
-                  metric={progressSummary.strongestGain}
-                  fallback='No gain yet'
-                />
-
-                <SummaryCard
-                  label='Priority follow-up'
-                  metric={progressSummary.priorityFollowUp}
-                  fallback='No follow-up yet'
-                />
-              </div>
-            </div>
-          </aside>
-
-          <ProgressTable metrics={metrics} />
-        </div>
+      {progressSummary ? (
+        <ProgressComparisonPanel metrics={metrics} progressSummary={progressSummary} />
       ) : (
         <EmptyProgressState storeName={selectedWeek.storeName} />
       )}
