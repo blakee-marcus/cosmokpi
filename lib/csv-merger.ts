@@ -133,8 +133,17 @@ export function recalculatePercentages(record: EmployeeKpiRowWithSources): void 
  * Exclude internal metadata fields
  */
 function copyRecordForSource(record: EmployeeKpiRowWithSources): Record<string, string | number> {
-  const { sources, ...data } = record;
-  return data;
+  const sourceData: Record<string, string | number> = {};
+
+  for (const [key, value] of Object.entries(record)) {
+    if (key === 'sources') continue;
+
+    if (typeof value === 'string' || typeof value === 'number') {
+      sourceData[key] = value;
+    }
+  }
+
+  return sourceData;
 }
 
 /**

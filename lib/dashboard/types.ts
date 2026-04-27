@@ -1,3 +1,15 @@
+export type KpiSourceFile = {
+  fileName: string;
+  type?: 'game-guide' | 'ges' | 'unknown';
+  importedAt?: string;
+};
+
+export type EmployeeKpiSource = {
+  fileName: string;
+  type: 'game-guide' | 'ges' | 'unknown';
+  importedAt?: string;
+};
+
 export type EmployeeKpiRow = {
   name: string;
   storeName: string;
@@ -14,13 +26,11 @@ export type EmployeeKpiRow = {
   reviewsAskedPercent: number;
   sharedReplayPercent: number;
   previewsPercent: number;
-  [key: string]: string | number;
-};
 
-export type KpiSourceFile = {
-  fileName: string;
-  type?: 'game-guide' | 'ges' | 'unknown';
-  importedAt?: string;
+  // New multi-file/import metadata support
+  sources?: EmployeeKpiSource[];
+
+  [key: string]: string | number | EmployeeKpiSource[] | undefined;
 };
 
 export type StoredWeek = {

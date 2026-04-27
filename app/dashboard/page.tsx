@@ -1,6 +1,5 @@
 'use client';
 
-import type { ChangeEventHandler } from 'react';
 import { useCallback, useDeferredValue, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -30,7 +29,7 @@ const DEFAULT_SORT_KEY: SortKey = 'replaysSoldPercent';
 function getSelectedWeek(
   weeks: StoredDashboardWeek[],
   selectedWeekId: string,
-  latestWeekId: string,
+  latestWeekId?: string | null,
 ) {
   const activeWeekId = selectedWeekId || latestWeekId || weeks[0]?.id || '';
 
@@ -143,8 +142,8 @@ export default function DashboardPage() {
     setSortKey(DEFAULT_SORT_KEY);
   }, []);
 
-  const handleSearchTermChange = useCallback<ChangeEventHandler<HTMLInputElement>>((event) => {
-    setSearchTerm(event.target.value);
+  const handleSearchTermChange = useCallback((nextSearchTerm: string) => {
+    setSearchTerm(nextSearchTerm);
   }, []);
 
   const handleExportSelectedWeek = useCallback(() => {
