@@ -218,36 +218,44 @@ export const WeekProgressSection = memo(function WeekProgressSection({
   const progressSummary = previousWeek ? getProgressSummary(metrics) : null;
 
   return (
-    <section className='snappy-section rounded-[30px] border-2 border-cosmo-black/10 bg-cosmo-white text-cosmo-black shadow-[6px_7px_0_0_rgba(0,0,0,0.10)]'>
-      <div className='rounded-t-[28px] border-b-2 border-cosmo-black/10 bg-comic-fog p-5'>
-        <div className='flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
-          <div>
-            <p className='font-tag text-sm font-black uppercase text-primary-web-red'>
-              Week-to-week progress
-            </p>
+    <section className='snappy-section overflow-hidden rounded-[32px] border-2 border-cosmo-black/10 bg-cosmo-white text-cosmo-black shadow-[6px_7px_0_0_rgba(0,0,0,0.08)]'>
+      <div className='border-b-2 border-cosmo-black/10 bg-comic-fog/70 px-5 py-6 sm:px-6 lg:px-7'>
+        <div className='grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end'>
+          <div className='max-w-3xl'>
+            <div className='inline-flex rounded-full border-2 border-primary-web-red/15 bg-cosmo-white px-3 py-1'>
+              <p className='font-tag text-xs font-black uppercase tracking-wide text-primary-web-red'>
+                Week-to-week progress
+              </p>
+            </div>
 
-            <h2 className='mt-2 font-heading text-2xl font-black'>
+            <h2 className='mt-4 font-heading text-2xl font-black leading-tight sm:text-3xl'>
               {previousWeek
                 ? `${selectedWeek.weekLabel} vs ${previousWeek.weekLabel}`
                 : 'Build the next weekly comparison'}
             </h2>
 
-            <p className='mt-1 max-w-3xl text-sm font-medium leading-6 text-ink-soft'>
+            <p className='mt-2 text-sm font-medium leading-6 text-ink-soft sm:text-base'>
               {previousWeek
                 ? `Review ${selectedWeek.storeName} movement across saved KPI reports and identify where leadership follow-through is needed next.`
                 : `Add another saved week for ${selectedWeek.storeName} to unlock KPI movement, trend context, and follow-up priorities.`}
             </p>
           </div>
 
-          {progressSummary ? <ProgressSummaryStats progressSummary={progressSummary} /> : null}
+          {progressSummary ? (
+            <div className='rounded-[24px] border-2 border-cosmo-black/10 bg-cosmo-white p-4 shadow-[4px_5px_0_0_rgba(0,0,0,0.07)]'>
+              <ProgressSummaryStats progressSummary={progressSummary} />
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {progressSummary ? (
-        <ProgressComparisonPanel metrics={metrics} progressSummary={progressSummary} />
-      ) : (
-        <EmptyProgressState storeName={selectedWeek.storeName} />
-      )}
+      <div className='bg-cosmo-white p-5 sm:p-6 lg:p-7'>
+        {progressSummary ? (
+          <ProgressComparisonPanel metrics={metrics} progressSummary={progressSummary} />
+        ) : (
+          <EmptyProgressState storeName={selectedWeek.storeName} />
+        )}
+      </div>
     </section>
   );
 });

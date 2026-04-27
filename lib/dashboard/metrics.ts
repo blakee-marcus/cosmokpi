@@ -1,10 +1,6 @@
 import { EMPLOYEE_PROGRESS_METRICS, KPI_GOALS, STEADY_DELTA_THRESHOLD } from './constants';
 import { getEmployeeComparisonKey, getStoreComparisonKey } from './comparison';
-import {
-  formatPointDelta,
-  normalizePercent,
-  safePercent,
-} from './formatters';
+import { formatPointDelta, normalizePercent, safePercent } from './formatters';
 import type {
   EmployeeKpiRow,
   EmployeePercentMetricKey,
@@ -64,19 +60,19 @@ export function getProgressClasses(status: ProgressStatus) {
   switch (status) {
     case 'improved':
       return {
-        card: 'border-kpi-green/50 bg-[#E5F9D7] text-cosmo-black shadow-[5px_6px_0_0_rgba(41,137,42,0.18)]',
+        card: 'border-kpi-green/50 bg-[#E5F9D7] text-cosmo-black',
         pill: 'bg-kpi-green text-cosmo-white',
         text: 'text-kpi-green',
       };
     case 'steady':
       return {
-        card: 'border-kpi-yellow/70 bg-[#F9E8A5] text-cosmo-black shadow-[5px_6px_0_0_rgba(232,195,73,0.24)]',
+        card: 'border-kpi-yellow/70 bg-[#F9E8A5] text-cosmo-black',
         pill: 'bg-kpi-yellow text-cosmo-black',
         text: 'text-[#7A5A00]',
       };
     default:
       return {
-        card: 'border-kpi-red/50 bg-[#FCCFCD] text-cosmo-black shadow-[5px_6px_0_0_rgba(179,38,30,0.18)]',
+        card: 'border-kpi-red/50 bg-[#FCCFCD] text-cosmo-black',
         pill: 'bg-kpi-red text-cosmo-white',
         text: 'text-kpi-red',
       };
@@ -245,21 +241,21 @@ export function getStatusClasses(status: Status) {
   switch (status) {
     case 'onTrack':
       return {
-        card: 'border-kpi-green/50 bg-[#E5F9D7] text-cosmo-black shadow-[5px_6px_0_0_rgba(41,137,42,0.18)]',
+        card: 'border-kpi-green/50 bg-[#E5F9D7] text-cosmo-black',
         pill: 'bg-kpi-green text-cosmo-white',
         bar: 'bg-kpi-green',
         soft: 'bg-[#E5F9D7] text-cosmo-black',
       };
     case 'watch':
       return {
-        card: 'border-kpi-yellow/70 bg-[#F9E8A5] text-cosmo-black shadow-[5px_6px_0_0_rgba(232,195,73,0.24)]',
+        card: 'border-kpi-yellow/70 bg-[#F9E8A5] text-cosmo-black',
         pill: 'bg-kpi-yellow text-cosmo-black',
         bar: 'bg-kpi-yellow',
         soft: 'bg-[#F9E8A5] text-cosmo-black',
       };
     default:
       return {
-        card: 'border-kpi-red/50 bg-[#FCCFCD] text-cosmo-black shadow-[5px_6px_0_0_rgba(179,38,30,0.18)]',
+        card: 'border-kpi-red/50 bg-[#FCCFCD] text-cosmo-black',
         pill: 'bg-kpi-red text-cosmo-white',
         bar: 'bg-kpi-red',
         soft: 'bg-[#FCCFCD] text-cosmo-black',

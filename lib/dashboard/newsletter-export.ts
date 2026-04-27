@@ -16,18 +16,26 @@ type EmployeeRow = StoredWeek['employees'][number];
 const EXPORT_SCALE = 2;
 
 const brand = {
-  offWhite: '#F5F6FA',
-  white: '#FFFFFF',
+  background: '#F5F6FA',
+  surface: '#FFFFFF',
   red: '#FB2D61',
-  berry: '#890E40',
+  redSoft: '#FFE8EF',
   black: '#000000',
-  graphite: '#2B2B2B',
-  grey: '#6E6E6E',
-  fog: '#E5E5E5',
-  lightFog: '#EEF1F6',
+  ink: '#2B2B2B',
+  muted: '#6E6E6E',
+  line: '#DADDE5',
+  rowAlt: '#FAFBFD',
   green: '#29892A',
-  yellow: '#E8C349',
+  greenSoft: '#EAF6EA',
+  yellow: '#B89116',
+  yellowSoft: '#FFF5D2',
   danger: '#B3261E',
+  dangerSoft: '#FCE8E6',
+} as const;
+
+const font = {
+  heading: 'Tenon, "DM Sans", Arial, sans-serif',
+  body: '"DM Sans", Arial, sans-serif',
 } as const;
 
 function drawRoundedRect(
@@ -75,7 +83,7 @@ function strokeRoundedRect(
   height: number,
   radius: number,
   strokeStyle: string,
-  lineWidth = 2,
+  lineWidth = 1,
 ) {
   drawRoundedRect(context, x, y, width, height, radius);
   context.strokeStyle = strokeStyle;
@@ -108,17 +116,16 @@ function fillTextLeft(
   context.fillText(text, x, y, maxWidth);
 }
 
-function drawSolidShadow(
+function fillTextRight(
   context: CanvasRenderingContext2D,
+  text: string,
   x: number,
   y: number,
-  width: number,
-  height: number,
-  radius: number,
-  offsetX = 7,
-  offsetY = 8,
+  maxWidth: number,
 ) {
-  fillRoundedRect(context, x + offsetX, y + offsetY, width, height, radius, 'rgba(0, 0, 0, 0.12)');
+  context.textAlign = 'right';
+  context.textBaseline = 'middle';
+  context.fillText(text, x, y, maxWidth);
 }
 
 function getExportStoreLabel(storeName: string) {
@@ -138,23 +145,26 @@ function getMetricStatus(percentValue: number, goal: number) {
   if (percent >= goal) {
     return {
       label: 'On goal',
-      fill: brand.green,
-      text: brand.white,
+      dot: brand.green,
+      background: brand.greenSoft,
+      border: 'rgba(41, 137, 42, 0.22)',
     };
   }
 
   if (percent >= goal * 0.85) {
     return {
       label: 'Watch',
-      fill: brand.yellow,
-      text: brand.black,
+      dot: brand.yellow,
+      background: brand.yellowSoft,
+      border: 'rgba(184, 145, 22, 0.24)',
     };
   }
 
   return {
     label: 'Focus',
-    fill: brand.danger,
-    text: brand.white,
+    dot: brand.danger,
+    background: brand.dangerSoft,
+    border: 'rgba(179, 38, 30, 0.22)',
   };
 }
 
@@ -173,7 +183,7 @@ function getMetricPercent(employee: EmployeeRow, columnIndex: number) {
 function getFirstNameWithLastInitial(name: string) {
   const nameParts = name.trim().split(/\s+/);
   const firstName = getFirstName(name);
-  const lastName = nameParts.length > 1 ? nameParts.at(-1) : '';
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
   if (!lastName) return firstName;
 
@@ -193,7 +203,7 @@ function getEmployeeValues(employee: EmployeeRow, hasGames: boolean) {
   ];
 }
 
-function drawMetricPill(
+function drawMetricValue(
   context: CanvasRenderingContext2D,
   value: string,
   employee: EmployeeRow,
@@ -207,16 +217,22 @@ function drawMetricPill(
     getMetricPercent(employee, columnIndex),
     getMetricGoal(columnIndex),
   );
-  const pillWidth = Math.min(width - 34, Math.max(108, value.length * 18 + 34));
-  const pillHeight = 34;
-  const pillX = x + (width - pillWidth) / 2;
-  const pillY = y + (height - pillHeight) / 2;
+  const chipWidth = Math.min(width - 24, Math.max(96, value.length * 13 + 58));
+  const chipHeight = 34;
+  const chipX = x + (width - chipWidth) / 2;
+  const chipY = y + (height - chipHeight) / 2;
 
-  fillRoundedRect(context, pillX, pillY, pillWidth, pillHeight, 17, status.fill);
+  fillRoundedRect(context, chipX, chipY, chipWidth, chipHeight, 17, status.background);
+  strokeRoundedRect(context, chipX, chipY, chipWidth, chipHeight, 17, status.border, 1.5);
 
-  context.fillStyle = status.text;
-  context.font = '900 20px "DM Sans", Arial, sans-serif';
-  fillTextCentered(context, value, pillX, pillY, pillWidth, pillHeight);
+  context.beginPath();
+  context.arc(chipX + 20, chipY + chipHeight / 2, 5, 0, Math.PI * 2);
+  context.fillStyle = status.dot;
+  context.fill();
+
+  context.fillStyle = brand.black;
+  context.font = `900 20px ${font.body}`;
+  fillTextCentered(context, value, chipX + 20, chipY, chipWidth - 20, chipHeight);
 }
 
 function isManagementRole(role: string | number | undefined) {
@@ -250,28 +266,201 @@ function getFrontlineNewsletterRows(week: StoredWeek) {
   return getNewsletterRows(week).filter((employee) => !isManagementRole(employee.role));
 }
 
+function drawHeader(
+  context: CanvasRenderingContext2D,
+  week: StoredWeek,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const storeLabel = getExportStoreLabel(week.storeName || 'Store') || 'Store';
+
+  fillRoundedRect(context, x, y, width, height, 28, brand.surface);
+  strokeRoundedRect(context, x, y, width, height, 28, brand.line, 1.5);
+
+  context.fillStyle = brand.red;
+  context.font = `900 18px ${font.body}`;
+  fillTextLeft(context, 'FRONTLINE KPI SNAPSHOT', x + 30, y + 36, width - 60);
+
+  context.fillStyle = brand.black;
+  context.font = `900 44px ${font.heading}`;
+  fillTextLeft(context, `${storeLabel} Performance`, x + 30, y + 78, width - 360);
+
+  context.fillStyle = brand.muted;
+  context.font = `800 18px ${font.body}`;
+  fillTextLeft(
+    context,
+    '',
+    x + 30,
+    y + 116,
+    width - 360,
+  );
+
+  const weekPillWidth = 280;
+  const weekPillHeight = 58;
+  const weekPillX = x + width - weekPillWidth - 30;
+  const weekPillY = y + 36;
+
+  fillRoundedRect(context, weekPillX, weekPillY, weekPillWidth, weekPillHeight, 20, brand.redSoft);
+  strokeRoundedRect(
+    context,
+    weekPillX,
+    weekPillY,
+    weekPillWidth,
+    weekPillHeight,
+    20,
+    'rgba(251, 45, 97, 0.18)',
+  );
+
+  context.fillStyle = brand.red;
+  context.font = `900 14px ${font.body}`;
+  fillTextLeft(context, 'REPORT WEEK', weekPillX + 20, weekPillY + 19, weekPillWidth - 40);
+
+  context.fillStyle = brand.black;
+  context.font = `900 22px ${font.body}`;
+  fillTextLeft(context, week.weekLabel, weekPillX + 20, weekPillY + 40, weekPillWidth - 40);
+}
+
+function drawGoalStrip(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  fillRoundedRect(context, x, y, width, height, 22, brand.red);
+
+  context.fillStyle = brand.surface;
+  context.font = `900 18px ${font.body}`;
+  fillTextLeft(context, '', x + 24, y + height / 2, 240);
+
+  context.font = `800 17px ${font.body}`;
+  context.textAlign = 'right';
+  context.textBaseline = 'middle';
+  context.fillText(
+    `Goals: Replay ${KPI_GOALS.replayPercent}%  •  Review Ask ${KPI_GOALS.reviewsAskedPercent}%  •  Preview ${KPI_GOALS.previewsPercent}%`,
+    x + width - 24,
+    y + height / 2,
+    width - 300,
+  );
+}
+
+function drawTableHeader(
+  context: CanvasRenderingContext2D,
+  headers: string[],
+  columnWidths: number[],
+  x: number,
+  y: number,
+  height: number,
+) {
+  let currentX = x;
+
+  headers.forEach((header, index) => {
+    const columnWidth = columnWidths[index];
+    const isFirstColumn = index === 0;
+
+    context.fillStyle = brand.background;
+    context.fillRect(currentX, y, columnWidth, height);
+
+    context.fillStyle = brand.ink;
+    context.font = `900 17px ${font.body}`;
+
+    if (isFirstColumn) {
+      fillTextLeft(context, header, currentX + 22, y + height / 2, columnWidth - 36);
+    } else {
+      fillTextCentered(context, header, currentX, y, columnWidth, height);
+    }
+
+    currentX += columnWidth;
+  });
+}
+
+function drawEmptyRow(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  context.fillStyle = brand.surface;
+  context.fillRect(x, y, width, height);
+
+  context.fillStyle = brand.muted;
+  context.font = `800 20px ${font.body}`;
+  fillTextCentered(context, 'No frontline KPI rows found for this week.', x, y, width, height);
+}
+
+function drawEmployeeRow(
+  context: CanvasRenderingContext2D,
+  employee: EmployeeRow,
+  rowIndex: number,
+  columnWidths: number[],
+  x: number,
+  y: number,
+  height: number,
+) {
+  const hasGames = Number(employee.totalGames) > 0 || Number(employee.guests) > 0;
+  const values = getEmployeeValues(employee, hasGames);
+  let currentX = x;
+
+  values.forEach((value, columnIndex) => {
+    const columnWidth = columnWidths[columnIndex];
+    const isNameColumn = columnIndex === 0;
+    const isMetricColumn = columnIndex >= 3;
+
+    context.fillStyle = rowIndex % 2 === 0 ? brand.surface : brand.rowAlt;
+    context.fillRect(currentX, y, columnWidth, height);
+
+    context.strokeStyle = brand.line;
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(currentX, y + height);
+    context.lineTo(currentX + columnWidth, y + height);
+    context.stroke();
+
+    if (isNameColumn) {
+      context.fillStyle = brand.black;
+      context.font = `900 23px ${font.heading}`;
+      fillTextLeft(context, value, currentX + 22, y + height / 2, columnWidth - 34);
+    } else if (!hasGames) {
+      context.fillStyle = brand.muted;
+      context.font = `800 20px ${font.body}`;
+      fillTextCentered(context, value, currentX, y, columnWidth, height);
+    } else if (isMetricColumn) {
+      drawMetricValue(context, value, employee, columnIndex, currentX, y, columnWidth, height);
+    } else {
+      context.fillStyle = brand.ink;
+      context.font = `900 22px ${font.body}`;
+      fillTextCentered(context, value, currentX, y, columnWidth, height);
+    }
+
+    currentX += columnWidth;
+  });
+}
+
 function createNewsletterKpiCanvas(week: StoredWeek) {
   const rows = getFrontlineNewsletterRows(week);
 
-  const padding = 56;
-  const cardPadding = 34;
-  const columnWidths = [310, 190, 200, 210, 250, 210];
+  const pagePadding = 46;
+  const cardPadding = 30;
+  const columnWidths = [286, 140, 150, 172, 196, 172];
   const tableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
 
-  const headerBlockHeight = 128;
-  const metaHeight = 52;
-  const headerHeight = 58;
-  const rowHeight = 58;
-  const tableHeight = headerHeight + rows.length * rowHeight;
-  const footerHeight = 52;
-  const gap = 22;
+  const headerBlockHeight = 150;
+  const goalStripHeight = 54;
+  const tableHeaderHeight = 50;
+  const rowHeight = 56;
+  const tableRowsHeight = Math.max(rows.length, 1) * rowHeight;
+  const tableHeight = tableHeaderHeight + tableRowsHeight;
+  const verticalGap = 16;
 
   const cardWidth = tableWidth + cardPadding * 2;
   const cardHeight =
-    cardPadding * 2 + headerBlockHeight + metaHeight + gap + tableHeight + gap + footerHeight;
+    cardPadding * 2 + headerBlockHeight + verticalGap + goalStripHeight + verticalGap + tableHeight;
 
-  const width = cardWidth + padding * 2;
-  const height = cardHeight + padding * 2;
+  const width = cardWidth + pagePadding * 2;
+  const height = cardHeight + pagePadding * 2;
 
   const canvas = document.createElement('canvas');
   canvas.width = width * EXPORT_SCALE;
@@ -285,160 +474,51 @@ function createNewsletterKpiCanvas(week: StoredWeek) {
   context.scale(EXPORT_SCALE, EXPORT_SCALE);
   context.clearRect(0, 0, width, height);
 
-  context.fillStyle = brand.offWhite;
+  context.fillStyle = brand.background;
   context.fillRect(0, 0, width, height);
 
-  const cardX = padding;
-  const cardY = padding;
+  const cardX = pagePadding;
+  const cardY = pagePadding;
   const contentX = cardX + cardPadding;
   let currentY = cardY + cardPadding;
 
-  drawSolidShadow(context, cardX, cardY, cardWidth, cardHeight, 32);
-  fillRoundedRect(context, cardX, cardY, cardWidth, cardHeight, 32, brand.white);
-  strokeRoundedRect(context, cardX, cardY, cardWidth, cardHeight, 32, 'rgba(0, 0, 0, 0.12)', 2);
+  fillRoundedRect(context, cardX, cardY, cardWidth, cardHeight, 32, brand.surface);
+  strokeRoundedRect(context, cardX, cardY, cardWidth, cardHeight, 32, brand.line, 1.5);
 
-  fillRoundedRect(context, contentX, currentY, tableWidth, headerBlockHeight, 28, brand.red);
+  drawHeader(context, week, contentX, currentY, tableWidth, headerBlockHeight);
+  currentY += headerBlockHeight + verticalGap;
 
-  const storeLabel = getExportStoreLabel(week.storeName || 'Store') || 'Store';
-
-  context.fillStyle = brand.white;
-  context.font = '900 20px "DM Sans", Arial, sans-serif';
-  fillTextLeft(context, 'FRONTLINE NEWSLETTER', contentX + 30, currentY + 34, tableWidth - 60);
-
-  context.font = '900 48px Tenon, "DM Sans", Arial, sans-serif';
-  fillTextLeft(context, 'Store KPI Performance', contentX + 30, currentY + 78, tableWidth - 60);
-
-  context.font = '800 22px "DM Sans", Arial, sans-serif';
-  context.fillStyle = 'rgba(255, 255, 255, 0.86)';
-  context.textAlign = 'right';
-  context.textBaseline = 'middle';
-  context.fillText(storeLabel, contentX + tableWidth - 30, currentY + 36, 360);
-
-  currentY += headerBlockHeight + gap;
-
-  fillRoundedRect(context, contentX, currentY, tableWidth, metaHeight, 24, brand.offWhite);
-  strokeRoundedRect(
-    context,
-    contentX,
-    currentY,
-    tableWidth,
-    metaHeight,
-    24,
-    'rgba(0, 0, 0, 0.10)',
-    1.5,
-  );
-
-  context.fillStyle = brand.grey;
-  context.font = '900 16px "DM Sans", Arial, sans-serif';
-  fillTextLeft(context, 'REPORT WEEK', contentX + 24, currentY + metaHeight / 2, 220);
-
-  context.fillStyle = brand.black;
-  context.font = '900 22px "DM Sans", Arial, sans-serif';
-  context.textAlign = 'right';
-  context.fillText(week.weekLabel, contentX + tableWidth - 24, currentY + metaHeight / 2);
-
-  currentY += metaHeight + gap;
-
-  const headers = ['Team Member', '# Games', '# Guests', 'Replay', 'Review Ask', 'Preview'];
+  drawGoalStrip(context, contentX, currentY, tableWidth, goalStripHeight);
+  currentY += goalStripHeight + verticalGap;
 
   const tableX = contentX;
   const tableY = currentY;
-  const tableRadius = 24;
+  const headers = ['Team Member', '# Games', '# Guests', 'Replay', 'Review Ask', 'Preview'];
 
   context.save();
-  drawRoundedRect(context, tableX, tableY, tableWidth, tableHeight, tableRadius);
+  drawRoundedRect(context, tableX, tableY, tableWidth, tableHeight, 24);
   context.clip();
 
-  context.fillStyle = brand.black;
-  context.fillRect(tableX, tableY, tableWidth, headerHeight);
+  drawTableHeader(context, headers, columnWidths, tableX, tableY, tableHeaderHeight);
 
-  let currentX = tableX;
-
-  headers.forEach((header, index) => {
-    const columnWidth = columnWidths[index];
-
-    context.fillStyle = brand.white;
-    context.font = '900 21px Tenon, "DM Sans", Arial, sans-serif';
-    fillTextCentered(context, header, currentX, tableY, columnWidth, headerHeight);
-
-    if (index > 0) {
-      context.strokeStyle = 'rgba(255, 255, 255, 0.20)';
-      context.lineWidth = 2;
-      context.beginPath();
-      context.moveTo(currentX, tableY);
-      context.lineTo(currentX, tableY + tableHeight);
-      context.stroke();
-    }
-
-    currentX += columnWidth;
-  });
-
-  rows.forEach((employee, rowIndex) => {
-    const y = tableY + headerHeight + rowIndex * rowHeight;
-    const hasGames = Number(employee.totalGames) > 0 || Number(employee.guests) > 0;
-    const values = getEmployeeValues(employee, hasGames);
-
-    currentX = tableX;
-
-    values.forEach((value, columnIndex) => {
-      const columnWidth = columnWidths[columnIndex];
-      const isNameColumn = columnIndex === 0;
-      const isMetricColumn = columnIndex >= 3;
-
-      context.fillStyle = rowIndex % 2 === 0 ? brand.white : '#FAFBFD';
-      context.fillRect(currentX, y, columnWidth, rowHeight);
-
-      context.strokeStyle = brand.fog;
-      context.lineWidth = 2;
-      context.strokeRect(currentX, y, columnWidth, rowHeight);
-
-      if (isNameColumn) {
-        context.fillStyle = brand.black;
-        context.font = '900 25px Tenon, "DM Sans", Arial, sans-serif';
-        fillTextLeft(context, value, currentX + 24, y + rowHeight / 2, columnWidth - 38);
-      } else if (!hasGames) {
-        context.fillStyle = brand.grey;
-        context.font = '800 22px "DM Sans", Arial, sans-serif';
-        fillTextCentered(context, value, currentX, y, columnWidth, rowHeight);
-      } else if (isMetricColumn) {
-        drawMetricPill(context, value, employee, columnIndex, currentX, y, columnWidth, rowHeight);
-      } else {
-        context.fillStyle = brand.graphite;
-        context.font = '800 24px "DM Sans", Arial, sans-serif';
-        fillTextCentered(context, value, currentX, y, columnWidth, rowHeight);
-      }
-
-      currentX += columnWidth;
+  if (rows.length === 0) {
+    drawEmptyRow(context, tableX, tableY + tableHeaderHeight, tableWidth, rowHeight);
+  } else {
+    rows.forEach((employee, rowIndex) => {
+      drawEmployeeRow(
+        context,
+        employee,
+        rowIndex,
+        columnWidths,
+        tableX,
+        tableY + tableHeaderHeight + rowIndex * rowHeight,
+        rowHeight,
+      );
     });
-  });
+  }
 
   context.restore();
-
-  strokeRoundedRect(
-    context,
-    tableX,
-    tableY,
-    tableWidth,
-    tableHeight,
-    tableRadius,
-    'rgba(0, 0, 0, 0.14)',
-    2,
-  );
-
-  const footerY = tableY + tableHeight + gap;
-
-  fillRoundedRect(context, contentX, footerY, tableWidth, footerHeight, 24, brand.lightFog);
-
-  context.fillStyle = brand.grey;
-  context.font = '800 17px "DM Sans", Arial, sans-serif';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(
-    `Goals: Replay ${KPI_GOALS.replayPercent}%  •  Review Ask ${KPI_GOALS.reviewsAskedPercent}%  •  Preview ${KPI_GOALS.previewsPercent}%`,
-    contentX + tableWidth / 2,
-    footerY + footerHeight / 2,
-    tableWidth - 40,
-  );
+  strokeRoundedRect(context, tableX, tableY, tableWidth, tableHeight, 24, brand.line, 1.5);
 
   return canvas;
 }
