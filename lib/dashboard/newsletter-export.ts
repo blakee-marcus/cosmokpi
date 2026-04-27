@@ -116,18 +116,6 @@ function fillTextLeft(
   context.fillText(text, x, y, maxWidth);
 }
 
-function fillTextRight(
-  context: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-) {
-  context.textAlign = 'right';
-  context.textBaseline = 'middle';
-  context.fillText(text, x, y, maxWidth);
-}
-
 function getExportStoreLabel(storeName: string) {
   return storeName
     .replace(/^The Escape Game\s*/i, '')

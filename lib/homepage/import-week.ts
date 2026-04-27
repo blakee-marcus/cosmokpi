@@ -1,46 +1,8 @@
 import { getReportTypeLabel } from '@/lib/csv-detection';
 import { mergeEmployeeRecords, calculateStoreTotals } from '@/lib/csv-merger';
 import { parseFltmCsv } from '@/lib/csv-parser';
-import type { ImportReviewFile, ReportType } from '@/lib/fltm-types';
 import { formatWeekLabel } from './dates';
-import type { EmployeeKpiRow, StoredWeek, UploadResult } from './types';
-
-function createContentHash(content: string) {
-  let hash = 0;
-
-  for (let index = 0; index < content.length; index += 1) {
-    hash = (hash << 5) - hash + content.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return `${content.length}-${Math.abs(hash)}`;
-}
-
-function getImportReportType(importFile: ImportReviewFile) {
-  const looseImportFile = importFile as ImportReviewFile & {
-    reportType?: ReportType;
-    type?: ReportType;
-  };
-
-  return (looseImportFile.reportType ?? looseImportFile.type ?? 'game-guide') as ReportType;
-}
-
-function getStoreName(importFile: ImportReviewFile, employees: EmployeeKpiRow[]) {
-  const looseImportFile = importFile as ImportReviewFile & { storeName?: string };
-  return employees[0]?.storeName ?? looseImportFile.storeName ?? 'Unknown Store';
-}
-
-function parseImportFile(text: string, fileName: string, contentHash: string) {
-  const parseCsv = parseFltmCsv as (csvText: string, fileName?: string) => unknown;
-  const parsed = parseCsv(text, fileName) as Record<string, unknown>;
-
-  return {
-    ...parsed,
-    fileName,
-    contentHash,
-    importedAt: new Date().toISOString(),
-  } as unknown as ImportReviewFile;
-}
+import type { StoredWeek } from './types';
 
 export function isCsvFile(file: File) {
   return file.name.toLowerCase().endsWith('.csv');
