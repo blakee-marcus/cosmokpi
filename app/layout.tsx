@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const APP_NAME = 'TEG KPI Clarity';
@@ -52,6 +53,7 @@ export default function RootLayout({
         </a>
 
         <div className='relative flex min-h-dvh flex-col'>{children}</div>
+        <Analytics />
       </body>
     </html>
   );
