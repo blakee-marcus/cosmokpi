@@ -227,13 +227,9 @@ flnl-kpi-las-vegas-2026-04-20.png
 
 ## CI/CD
 
-GitHub Actions runs on:
+The repository uses a lean cOSmo KPI quality gate: GitHub Actions validates source code, and Vercel Git handles deployments. The pipeline does not upload CSV files, export artifacts, use deployment tokens, or handle employee KPI data.
 
-- Pull requests
-- Pushes to `main`
-- Manual workflow dispatches
-
-The CI job runs:
+GitHub Actions runs on pull requests, pushes to `main`, and manual workflow dispatches. The quality gate installs from the lockfile with Node from `.nvmrc`, then runs:
 
 ```bash
 npm ci
@@ -242,19 +238,27 @@ npm run typecheck
 npm run build
 ```
 
-Recommended deployment path:
+`npm run check` runs the same lint, typecheck, and production build sequence locally.
 
-- Use the Vercel GitHub integration.
+Recommended Vercel Git deployment path:
+
 - Pull requests create preview deployments.
 - Merges or pushes to `main` create production deployments.
 - GitHub Actions does not need `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID` secrets for this setup.
+- Use Vercel Deployment Protection if preview or production URLs should be limited to approved viewers.
 
 Recommended branch protection for `main`:
 
 - Require pull requests before merge.
-- Require the GitHub Actions CI check.
+- Require the cOSmo KPI Quality Gate check.
 - Require Vercel deployment checks if Vercel exposes them on the repository.
 - Block force pushes.
+
+Release and rollback expectations:
+
+- Review the Vercel preview before merging.
+- Confirm no real employee KPI data appears in preview testing, logs, or shared screenshots.
+- Roll back production by reverting the merged commit or promoting the previous stable Vercel deployment.
 
 ## Dependency Updates
 

@@ -1,4 +1,4 @@
-name: CI
+name: cOSmo KPI Quality Gate
 
 on:
   pull_request:
@@ -10,36 +10,44 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: true
+  NEXT_TELEMETRY_DISABLED: "1"
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   quality:
-    name: Lint, typecheck, and build
+    name: Validate local-first dashboard build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      CI: true
-      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
-      - name: Setup Node.js
+      - name: Setup Node.js from .nvmrc
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
+      - name: Install locked npm dependencies
         run: npm ci
 
-      - name: Lint
+      - name: Lint source
         run: npm run lint
 
-      - name: Typecheck
+      - name: Typecheck TypeScript
         run: npm run typecheck
 
-      - name: Build
+      - name: Build production app
         run: npm run build
