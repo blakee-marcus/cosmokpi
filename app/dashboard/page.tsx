@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useDeferredValue, useMemo, useState, useSyncExternalStore } from 'react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { EmployeeKpiTable } from '@/components/dashboard/EmployeeKpiTable';
@@ -36,6 +38,7 @@ import type {
   SortKey,
   StoredWeek,
 } from '@/lib/dashboard/types';
+import { fadeUp } from '@/lib/motion';
 
 const DEFAULT_SORT_KEY: SortKey = 'replaysSoldPercent';
 
@@ -253,32 +256,42 @@ export default function DashboardPage() {
           onExportSelectedWeek={handleExportSelectedWeek}
         />
 
-        <StatsGrid selectedPeriod={selectedPeriod} />
+        <AnimatePresence initial={false} mode='wait'>
+          <m.div
+            key={`${viewMode}:${selectedPeriod.id}`}
+            variants={fadeUp}
+            initial={false}
+            animate='visible'
+            exit='hidden'
+            className='space-y-8'>
+            <StatsGrid selectedPeriod={selectedPeriod} />
 
-        <KpiMetricGrid metrics={dashboardMetrics} />
+            <KpiMetricGrid metrics={dashboardMetrics} />
 
-        <WeekProgressSection
-          selectedPeriod={selectedPeriod}
-          previousPeriod={previousPeriod}
-          metrics={weekProgressMetrics}
-        />
+            <WeekProgressSection
+              selectedPeriod={selectedPeriod}
+              previousPeriod={previousPeriod}
+              metrics={weekProgressMetrics}
+            />
 
-        <EmployeeSpotlightSection
-          topReplay={spotlightEmployees.topReplay}
-          topReviewAsk={spotlightEmployees.topReviewAsk}
-          topPreview={spotlightEmployees.topPreview}
-        />
+            <EmployeeSpotlightSection
+              topReplay={spotlightEmployees.topReplay}
+              topReviewAsk={spotlightEmployees.topReviewAsk}
+              topPreview={spotlightEmployees.topPreview}
+            />
 
-        <EmployeeKpiTable
-          filteredEmployees={filteredEmployees}
-          hasPreviousPeriod={Boolean(previousPeriod)}
-          previousEmployeeByKey={previousEmployeeByKey}
-          viewMode={viewMode}
-          searchTerm={searchTerm}
-          sortKey={sortKey}
-          onSearchTermChange={handleSearchTermChange}
-          onSortKeyChange={setSortKey}
-        />
+            <EmployeeKpiTable
+              filteredEmployees={filteredEmployees}
+              hasPreviousPeriod={Boolean(previousPeriod)}
+              previousEmployeeByKey={previousEmployeeByKey}
+              viewMode={viewMode}
+              searchTerm={searchTerm}
+              sortKey={sortKey}
+              onSearchTermChange={handleSearchTermChange}
+              onSortKeyChange={setSortKey}
+            />
+          </m.div>
+        </AnimatePresence>
       </section>
     </main>
   );

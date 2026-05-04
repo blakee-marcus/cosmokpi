@@ -1,4 +1,7 @@
+import * as m from 'motion/react-m';
+
 import type { EmployeeKpiRow } from '@/lib/dashboard/types';
+import { listContainer, listItem } from '@/lib/motion';
 import { EmployeeSpotlight } from './EmployeeSpotlight';
 
 type SpotlightConfig = {
@@ -43,7 +46,7 @@ export function EmployeeSpotlightSection({
   ];
 
   return (
-    <section className='snappy-section overflow-visible'>
+    <m.section layout className='snappy-section overflow-visible'>
       <div className='mb-4 max-w-2xl'>
         <p className='font-tag text-sm font-black uppercase text-primary-web-red'>
           Team recognition
@@ -59,18 +62,21 @@ export function EmployeeSpotlightSection({
         </p>
       </div>
 
-      <div className='grid gap-4 overflow-visible px-1 pb-2 lg:grid-cols-3'>
+      <m.div
+        variants={listContainer}
+        className='grid gap-4 overflow-visible px-1 pb-2 lg:grid-cols-3'>
         {spotlights.map((spotlight) => (
-          <EmployeeSpotlight
-            key={spotlight.label}
-            label={spotlight.label}
-            employee={spotlight.employee}
-            metric={spotlight.metric}
-            count={spotlight.count}
-            note={spotlight.note}
-          />
+          <m.div key={spotlight.label} layout variants={listItem} className='h-full'>
+            <EmployeeSpotlight
+              label={spotlight.label}
+              employee={spotlight.employee}
+              metric={spotlight.metric}
+              count={spotlight.count}
+              note={spotlight.note}
+            />
+          </m.div>
         ))}
-      </div>
-    </section>
+      </m.div>
+    </m.section>
   );
 }

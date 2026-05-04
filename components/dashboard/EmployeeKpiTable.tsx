@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 
 import { getEmployeeComparisonKey } from '@/lib/dashboard/comparison';
 import {
@@ -19,6 +21,7 @@ import type {
   EmployeeKpiRow,
   SortKey,
 } from '@/lib/dashboard/types';
+import { fadeUp } from '@/lib/motion';
 
 const EmployeePercentCell = memo(function EmployeePercentCell({
   value,
@@ -198,7 +201,7 @@ export function EmployeeKpiTable({
   const rankingPeriodLabel = viewMode === 'monthly' ? 'this month' : 'this week';
 
   return (
-    <section className='snappy-section teg-panel overflow-hidden text-cosmo-black'>
+    <m.section layout className='snappy-section teg-panel overflow-hidden text-cosmo-black'>
       <div className='flex flex-col gap-4 border-b-2 border-cosmo-black/10 bg-comic-fog p-5 lg:flex-row lg:items-center lg:justify-between'>
         <div>
           <p className='font-tag text-sm font-black uppercase text-primary-web-red'>
@@ -296,11 +299,19 @@ export function EmployeeKpiTable({
         </div>
       </div>
 
-      {!filteredEmployees.length ? (
-        <div className='p-8 text-center font-semibold text-ink-soft'>
-          No team members match the current search or ranking filters.
-        </div>
-      ) : null}
-    </section>
+      <AnimatePresence>
+        {!filteredEmployees.length ? (
+          <m.div
+            key='empty-table-results'
+            variants={fadeUp}
+            initial='hidden'
+            animate='visible'
+            exit='hidden'
+            className='p-8 text-center font-semibold text-ink-soft'>
+            No team members match the current search or ranking filters.
+          </m.div>
+        ) : null}
+      </AnimatePresence>
+    </m.section>
   );
 }

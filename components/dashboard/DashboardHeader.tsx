@@ -1,6 +1,9 @@
 'use client';
 
+import type { KeyboardEvent } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 
 import { removeStoredWeek } from '@/lib/dashboard/storage';
 import type {
@@ -9,6 +12,7 @@ import type {
   DashboardViewMode,
   StoredWeek,
 } from '@/lib/dashboard/types';
+import { fadeUp, listContainer, listItem, modalBackdrop, modalPanel, panelIn } from '@/lib/motion';
 
 function getNextWeekIdAfterDelete(weeks: StoredWeek[], deletedWeekId: string) {
   const deletedIndex = weeks.findIndex((week) => week.id === deletedWeekId);
@@ -101,10 +105,7 @@ function ReportPeriodPicker({
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(selectedIndex);
-
-  useEffect(() => {
-    setActiveIndex(selectedIndex);
-  }, [selectedIndex, viewMode]);
+  const safeActiveIndex = Math.min(activeIndex, Math.max(options.length - 1, 0));
 
   useEffect(() => {
     if (!isOpen) return;
@@ -154,14 +155,14 @@ function ReportPeriodPicker({
     });
   }
 
-  function handleButtonKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+  function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       openListbox();
     }
   }
 
-  function handleListboxKeyDown(event: React.KeyboardEvent<HTMLUListElement>) {
+  function handleListboxKeyDown(event: KeyboardEvent<HTMLUListElement>) {
     if (event.key === 'Escape') {
       event.preventDefault();
       setIsOpen(false);
@@ -195,7 +196,7 @@ function ReportPeriodPicker({
 
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      const activeOption = options[activeIndex];
+      const activeOption = options[safeActiveIndex];
       if (activeOption) handleSelectOption(activeOption);
     }
   }
@@ -249,9 +250,16 @@ function ReportPeriodPicker({
         </span>
       </button>
 
-      {isOpen ? (
-        <div className='absolute right-0 z-30 mt-3 w-full min-w-[18rem] rounded-[28px] border-2 border-cosmo-black bg-cosmo-white p-2 text-cosmo-black shadow-[7px_8px_0_0_rgba(0,0,0,0.22)]'>
-          <div className='border-b-2 border-cosmo-black/10 px-4 py-3'>
+      <AnimatePresence>
+        {isOpen ? (
+          <m.div
+            key='period-picker'
+            variants={panelIn}
+            initial='hidden'
+            animate='visible'
+            exit='hidden'
+            className='absolute right-0 z-30 mt-3 w-full min-w-[18rem] rounded-[28px] border-2 border-cosmo-black bg-cosmo-white p-2 text-cosmo-black shadow-[7px_8px_0_0_rgba(0,0,0,0.22)]'>
+            <div className='border-b-2 border-cosmo-black/10 px-4 py-3'>
             <p className='font-tag text-xs font-black uppercase tracking-wide text-primary-web-red'>
               Choose {viewMode === 'monthly' ? 'month' : 'week'}
             </p>
@@ -260,64 +268,69 @@ function ReportPeriodPicker({
                 ? 'Monthly view groups saved weekly reports into one trend snapshot.'
                 : 'Weekly view focuses the dashboard on one saved report.'}
             </p>
-          </div>
+            </div>
 
-          <ul
-            ref={listboxRef}
-            id={listboxId}
-            role='listbox'
-            tabIndex={-1}
-            aria-labelledby={labelId}
-            aria-activedescendant={`${listboxId}-option-${activeIndex}`}
-            onKeyDown={handleListboxKeyDown}
-            className='mt-2 max-h-72 overflow-y-auto rounded-[20px] p-1 focus-visible:outline-none'>
-            {options.map((option, index) => {
-              const isSelected = option.id === selectedOption.id;
-              const isActive = index === activeIndex;
+            <m.ul
+              ref={listboxRef}
+              id={listboxId}
+              role='listbox'
+              tabIndex={-1}
+              aria-labelledby={labelId}
+              aria-activedescendant={`${listboxId}-option-${safeActiveIndex}`}
+              variants={listContainer}
+              initial='hidden'
+              animate='visible'
+              onKeyDown={handleListboxKeyDown}
+              className='mt-2 max-h-72 overflow-y-auto rounded-[20px] p-1 focus-visible:outline-none'>
+              {options.map((option, index) => {
+                const isSelected = option.id === selectedOption.id;
+                const isActive = index === safeActiveIndex;
 
-              return (
-                <li
-                  id={`${listboxId}-option-${index}`}
-                  key={option.id}
-                  role='option'
-                  aria-selected={isSelected}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => handleSelectOption(option)}
-                  className={`flex cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 transition ${
-                    isSelected
-                      ? 'bg-primary-web-red text-cosmo-white shadow-[3px_4px_0_0_var(--primary-web-red-dark)]'
-                      : isActive
-                        ? 'bg-off-white text-cosmo-black'
-                        : 'text-cosmo-black hover:bg-off-white'
-                  }`}>
-                  <span className='min-w-0'>
-                    <span className='block truncate text-sm font-black leading-none'>
-                      {option.label}
+                return (
+                  <m.li
+                    id={`${listboxId}-option-${index}`}
+                    key={option.id}
+                    role='option'
+                    aria-selected={isSelected}
+                    variants={listItem}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => handleSelectOption(option)}
+                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 transition ${
+                      isSelected
+                        ? 'bg-primary-web-red text-cosmo-white shadow-[3px_4px_0_0_var(--primary-web-red-dark)]'
+                        : isActive
+                          ? 'bg-off-white text-cosmo-black'
+                          : 'text-cosmo-black hover:bg-off-white'
+                    }`}>
+                    <span className='min-w-0'>
+                      <span className='block truncate text-sm font-black leading-none'>
+                        {option.label}
+                      </span>
+                      <span
+                        className={`mt-1 block truncate text-xs font-bold leading-none ${
+                          isSelected ? 'text-cosmo-white/75' : 'text-cosmo-black/55'
+                        }`}>
+                        {option.detail}
+                      </span>
                     </span>
-                    <span
-                      className={`mt-1 block truncate text-xs font-bold leading-none ${
-                        isSelected ? 'text-cosmo-white/75' : 'text-cosmo-black/55'
-                      }`}>
-                      {option.detail}
-                    </span>
-                  </span>
 
-                  {isSelected ? (
-                    <span className='grid size-7 shrink-0 place-items-center rounded-full bg-cosmo-white text-primary-web-red'>
-                      <svg aria-hidden='true' viewBox='0 0 20 20' className='size-4'>
-                        <path
-                          fill='currentColor'
-                          d='M16.7 5.3a1 1 0 0 1 0 1.4l-7.25 7.25a1 1 0 0 1-1.42 0L3.3 9.2a1 1 0 1 1 1.4-1.4l4.04 4.03L15.3 5.3a1 1 0 0 1 1.4 0Z'
-                        />
-                      </svg>
-                    </span>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
+                    {isSelected ? (
+                      <span className='grid size-7 shrink-0 place-items-center rounded-full bg-cosmo-white text-primary-web-red'>
+                        <svg aria-hidden='true' viewBox='0 0 20 20' className='size-4'>
+                          <path
+                            fill='currentColor'
+                            d='M16.7 5.3a1 1 0 0 1 0 1.4l-7.25 7.25a1 1 0 0 1-1.42 0L3.3 9.2a1 1 0 1 1 1.4-1.4l4.04 4.03L15.3 5.3a1 1 0 0 1 1.4 0Z'
+                          />
+                        </svg>
+                      </span>
+                    ) : null}
+                  </m.li>
+                );
+              })}
+            </m.ul>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
@@ -367,9 +380,13 @@ export function DashboardHeader({
 
   return (
     <>
-      <header className='teg-hero-panel overflow-visible p-5 sm:p-6 lg:p-8'>
+      <m.header
+        variants={panelIn}
+        initial={false}
+        animate='visible'
+        className='teg-hero-panel overflow-visible p-5 sm:p-6 lg:p-8'>
         <div className='grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-end'>
-          <div>
+          <m.div variants={fadeUp}>
             <div className='teg-eyebrow teg-eyebrow-white mb-4'>
               {selectedPeriod.storeName} {periodDescriptor} KPI review
             </div>
@@ -395,7 +412,7 @@ export function DashboardHeader({
                 </p>
               </div>
             ) : null}
-          </div>
+          </m.div>
 
           <div className='rounded-[30px] border-2 border-cosmo-white/25 bg-cosmo-black/15 p-4 backdrop-blur'>
             <div className='mb-4'>
@@ -444,62 +461,70 @@ export function DashboardHeader({
             </div>
           </div>
         </div>
-      </header>
+      </m.header>
 
-      {isRemoveModalOpen ? (
-        <div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-cosmo-black/60 px-4 py-6'
-          role='presentation'
-          onClick={() => setIsRemoveModalOpen(false)}>
-          <section
-            role='dialog'
-            aria-modal='true'
-            aria-labelledby='remove-week-title'
-            aria-describedby='remove-week-description'
-            className='w-full max-w-lg rounded-[32px] border-2 border-cosmo-black bg-cosmo-white p-6 text-cosmo-black shadow-[8px_10px_0_0_rgba(0,0,0,0.22)]'
-            onClick={(event) => event.stopPropagation()}>
-            <p className='font-tag text-sm font-black uppercase tracking-wide text-primary-web-red'>
-              Local report cleanup
-            </p>
-
-            <h2 id='remove-week-title' className='font-display mt-3 text-3xl font-black'>
-              Remove this saved report?
-            </h2>
-
-            <p
-              id='remove-week-description'
-              className='mt-4 text-sm font-semibold leading-6 text-cosmo-black/70'>
-              This only removes the report from this browser. Your original CSV, company systems,
-              and source data will stay unchanged.
-            </p>
-
-            <div className='mt-6 rounded-[22px] border-2 border-cosmo-black/10 bg-off-white p-4'>
-              <p className='font-tag text-xs font-black uppercase tracking-wide text-cosmo-black/60'>
-                Selected report
+      <AnimatePresence>
+        {isRemoveModalOpen ? (
+          <m.div
+            key='remove-report-modal'
+            variants={modalBackdrop}
+            initial='hidden'
+            animate='visible'
+            exit='hidden'
+            className='fixed inset-0 z-50 flex items-center justify-center bg-cosmo-black/60 px-4 py-6'
+            role='presentation'
+            onClick={() => setIsRemoveModalOpen(false)}>
+            <m.section
+              role='dialog'
+              aria-modal='true'
+              aria-labelledby='remove-week-title'
+              aria-describedby='remove-week-description'
+              variants={modalPanel}
+              className='w-full max-w-lg rounded-[32px] border-2 border-cosmo-black bg-cosmo-white p-6 text-cosmo-black shadow-[8px_10px_0_0_rgba(0,0,0,0.22)]'
+              onClick={(event) => event.stopPropagation()}>
+              <p className='font-tag text-sm font-black uppercase tracking-wide text-primary-web-red'>
+                Local report cleanup
               </p>
-              <p className='mt-1 font-heading text-lg font-black text-cosmo-black'>
-                {selectedWeek.weekLabel} · {selectedWeek.storeName}
+
+              <h2 id='remove-week-title' className='font-display mt-3 text-3xl font-black'>
+                Remove this saved report?
+              </h2>
+
+              <p
+                id='remove-week-description'
+                className='mt-4 text-sm font-semibold leading-6 text-cosmo-black/70'>
+                This only removes the report from this browser. Your original CSV, company systems,
+                and source data will stay unchanged.
               </p>
-            </div>
 
-            <div className='mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end'>
-              <button
-                type='button'
-                onClick={() => setIsRemoveModalOpen(false)}
-                className='teg-button-secondary inline-flex h-12 items-center justify-center !rounded-[18px] px-5 text-sm font-black'>
-                Keep report
-              </button>
+              <div className='mt-6 rounded-[22px] border-2 border-cosmo-black/10 bg-off-white p-4'>
+                <p className='font-tag text-xs font-black uppercase tracking-wide text-cosmo-black/60'>
+                  Selected report
+                </p>
+                <p className='mt-1 font-heading text-lg font-black text-cosmo-black'>
+                  {selectedWeek.weekLabel} · {selectedWeek.storeName}
+                </p>
+              </div>
 
-              <button
-                type='button'
-                onClick={handleConfirmRemoveWeek}
-                className='inline-flex h-12 items-center justify-center rounded-[18px] border-2 border-cosmo-black bg-primary-web-red px-5 text-sm font-black text-cosmo-white shadow-[4px_5px_0_0_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-web-red/30'>
-                Remove report
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
+              <div className='mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end'>
+                <button
+                  type='button'
+                  onClick={() => setIsRemoveModalOpen(false)}
+                  className='teg-button-secondary inline-flex h-12 items-center justify-center !rounded-[18px] px-5 text-sm font-black'>
+                  Keep report
+                </button>
+
+                <button
+                  type='button'
+                  onClick={handleConfirmRemoveWeek}
+                  className='inline-flex h-12 items-center justify-center rounded-[18px] border-2 border-cosmo-black bg-primary-web-red px-5 text-sm font-black text-cosmo-white shadow-[4px_5px_0_0_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-web-red/30'>
+                  Remove report
+                </button>
+              </div>
+            </m.section>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }

@@ -1,6 +1,10 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 
 import type { StoredWeek } from '@/lib/homepage/types';
+import { fadeUp, listContainer, listItem } from '@/lib/motion';
 
 type UploadStatusProps = {
   error: string | null;
@@ -28,7 +32,7 @@ function StatusBadge({ children, tone }: { children: string; tone: StatusTone })
   );
 }
 
-function StatusShell({ children, role }: { children: React.ReactNode; role?: 'alert' | 'status' }) {
+function StatusShell({ children, role }: { children: ReactNode; role?: 'alert' | 'status' }) {
   return (
     <div
       className='rounded-[24px] border-2 border-cosmo-black/10 bg-cosmo-white p-5'
@@ -83,8 +87,20 @@ export function UploadStatus({
   savedWeek,
   selectedFileName,
 }: UploadStatusProps) {
+  const statusKey = isProcessing
+    ? 'processing'
+    : error
+      ? `error-${error}`
+      : savedWeek
+        ? `saved-${savedWeek.id}`
+        : selectedFileName
+          ? `selected-${selectedFileName}`
+          : 'waiting';
+
+  let content: ReactNode;
+
   if (isProcessing) {
-    return (
+    content = (
       <StatusShell role='status'>
         <StatusHeader
           badge='Checking file'
@@ -94,10 +110,8 @@ export function UploadStatus({
         />
       </StatusShell>
     );
-  }
-
-  if (error) {
-    return (
+  } else if (error) {
+    content = (
       <StatusShell role='alert'>
         <StatusHeader
           badge='Needs attention'
@@ -107,9 +121,7 @@ export function UploadStatus({
         />
       </StatusShell>
     );
-  }
-
-  if (savedWeek) {
+  } else if (savedWeek) {
     const stats = [
       { label: 'Team', value: savedWeek.totals.employees },
       { label: 'Games', value: savedWeek.totals.totalGames },
@@ -117,7 +129,7 @@ export function UploadStatus({
       { label: 'Replays', value: savedWeek.totals.replaysSold },
     ];
 
-    return (
+    content = (
       <StatusShell role='status'>
         <div className='space-y-5'>
           <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
@@ -146,11 +158,13 @@ export function UploadStatus({
             </div>
           </div>
 
-          <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+          <m.div variants={listContainer} className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
             {stats.map((stat) => (
-              <SavedStat key={stat.label} {...stat} />
+              <m.div key={stat.label} variants={listItem}>
+                <SavedStat {...stat} />
+              </m.div>
             ))}
-          </div>
+          </m.div>
 
           <div className='rounded-[20px] bg-primary-web-red p-4 text-cosmo-white'>
             <p className='font-heading text-base font-black'>Ready for review</p>
@@ -167,20 +181,33 @@ export function UploadStatus({
         </div>
       </StatusShell>
     );
+  } else {
+    content = (
+      <StatusShell role='status'>
+        <StatusHeader
+          badge={selectedFileName ? 'File selected' : 'Waiting for CSV'}
+          tone='waiting'
+          title={selectedFileName ? 'Ready to process' : 'Ready for upload'}
+          description={
+            selectedFileName
+              ? `${selectedFileName} is selected. Once processing finishes, the report will save locally and the dashboard will be ready.`
+              : 'Upload the weekly cOSmo CSV to begin. Reports are saved locally only after validation passes.'
+          }
+        />
+      </StatusShell>
+    );
   }
 
   return (
-    <StatusShell role='status'>
-      <StatusHeader
-        badge={selectedFileName ? 'File selected' : 'Waiting for CSV'}
-        tone='waiting'
-        title={selectedFileName ? 'Ready to process' : 'Ready for upload'}
-        description={
-          selectedFileName
-            ? `${selectedFileName} is selected. Once processing finishes, the report will save locally and the dashboard will be ready.`
-            : 'Upload the weekly cOSmo CSV to begin. Reports are saved locally only after validation passes.'
-        }
-      />
-    </StatusShell>
+    <AnimatePresence initial={false} mode='wait'>
+      <m.div
+        key={statusKey}
+        variants={fadeUp}
+        initial={false}
+        animate='visible'
+        exit='hidden'>
+        {content}
+      </m.div>
+    </AnimatePresence>
   );
 }

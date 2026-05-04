@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 
 import { formatPercent, formatPointDelta } from '@/lib/dashboard/formatters';
 import {
@@ -8,6 +10,7 @@ import {
   getProgressSummary,
 } from '@/lib/dashboard/metrics';
 import type { DashboardPeriod, WeekProgressMetric } from '@/lib/dashboard/types';
+import { fadeUp, panelIn } from '@/lib/motion';
 
 type WeekProgressSectionProps = Readonly<{
   selectedPeriod: DashboardPeriod;
@@ -227,7 +230,12 @@ export const WeekProgressSection = memo(function WeekProgressSection({
   const periodLabel = selectedPeriod.periodType === 'monthly' ? 'Month-to-month' : 'Week-to-week';
 
   return (
-    <section className='snappy-section teg-card overflow-hidden text-cosmo-black'>
+    <m.section
+      layout
+      variants={panelIn}
+      initial={false}
+      animate='visible'
+      className='snappy-section teg-card overflow-hidden text-cosmo-black'>
       <div className='border-b-2 border-cosmo-black/10 bg-comic-fog/70 px-5 py-6 sm:px-6 lg:px-7'>
         <div className='grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end'>
           <div className='max-w-3xl'>
@@ -259,16 +267,25 @@ export const WeekProgressSection = memo(function WeekProgressSection({
       </div>
 
       <div className='bg-cosmo-white p-5 sm:p-6 lg:p-7'>
-        {progressSummary ? (
-          <ProgressComparisonPanel
-            metrics={metrics}
-            periodName={periodName}
-            progressSummary={progressSummary}
-          />
-        ) : (
-          <EmptyProgressState periodName={periodName} storeName={selectedPeriod.storeName} />
-        )}
+        <AnimatePresence initial={false} mode='wait'>
+          <m.div
+            key={progressSummary ? `comparison-${selectedPeriod.id}` : `empty-${selectedPeriod.id}`}
+            variants={fadeUp}
+            initial={false}
+            animate='visible'
+            exit='hidden'>
+            {progressSummary ? (
+              <ProgressComparisonPanel
+                metrics={metrics}
+                periodName={periodName}
+                progressSummary={progressSummary}
+              />
+            ) : (
+              <EmptyProgressState periodName={periodName} storeName={selectedPeriod.storeName} />
+            )}
+          </m.div>
+        </AnimatePresence>
       </div>
-    </section>
+    </m.section>
   );
 });

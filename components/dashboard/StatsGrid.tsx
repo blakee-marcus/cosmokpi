@@ -1,5 +1,8 @@
+import * as m from 'motion/react-m';
+
 import { formatNumber, shortDateFormatter } from '@/lib/dashboard/formatters';
 import type { DashboardPeriod } from '@/lib/dashboard/types';
+import { listContainer, listItem } from '@/lib/motion';
 import { SmallStatCard } from './SmallStatCard';
 
 function getPeriodSourceFiles(selectedPeriod: DashboardPeriod) {
@@ -59,34 +62,42 @@ export function StatsGrid({ selectedPeriod }: { selectedPeriod: DashboardPeriod 
       : `${selectedPeriod.includedWeekCount} saved reports`;
 
   return (
-    <section className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
-      <SmallStatCard
-        label='Team members'
-        value={formatNumber(selectedPeriod.totals.employees)}
-        detail={
-          isMonthly ? 'Unique team members in this month' : 'Included in this uploaded report'
-        }
-      />
+    <m.section layout variants={listContainer} className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+      <m.div layout variants={listItem}>
+        <SmallStatCard
+          label='Team members'
+          value={formatNumber(selectedPeriod.totals.employees)}
+          detail={
+            isMonthly ? 'Unique team members in this month' : 'Included in this uploaded report'
+          }
+        />
+      </m.div>
 
-      <SmallStatCard
-        label='Games hosted'
-        value={formatNumber(selectedPeriod.totals.totalGames)}
-        detail={
-          isMonthly ? 'Total games across included reports' : 'Total games connected to this week'
-        }
-      />
+      <m.div layout variants={listItem}>
+        <SmallStatCard
+          label='Games hosted'
+          value={formatNumber(selectedPeriod.totals.totalGames)}
+          detail={
+            isMonthly ? 'Total games across included reports' : 'Total games connected to this week'
+          }
+        />
+      </m.div>
 
-      <SmallStatCard
-        label='Guests served'
-        value={formatNumber(selectedPeriod.totals.guests)}
-        detail='Guest volume represented in the KPI rows'
-      />
+      <m.div layout variants={listItem}>
+        <SmallStatCard
+          label='Guests served'
+          value={formatNumber(selectedPeriod.totals.guests)}
+          detail='Guest volume represented in the KPI rows'
+        />
+      </m.div>
 
-      <SmallStatCard
-        label={isMonthly ? 'Reports included' : 'Source file'}
-        value={isMonthly ? reportCountLabel : sourceFileDateLabel}
-        detail={isMonthly ? selectedPeriod.includedWeekLabels.join(', ') : sourceFileLabel}
-      />
-    </section>
+      <m.div layout variants={listItem}>
+        <SmallStatCard
+          label={isMonthly ? 'Reports included' : 'Source file'}
+          value={isMonthly ? reportCountLabel : sourceFileDateLabel}
+          detail={isMonthly ? selectedPeriod.includedWeekLabels.join(', ') : sourceFileLabel}
+        />
+      </m.div>
+    </m.section>
   );
 }

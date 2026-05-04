@@ -1,5 +1,8 @@
 import type { ChangeEvent, DragEvent, RefObject } from 'react';
+import * as m from 'motion/react-m';
+
 import type { StoredWeek } from '@/lib/homepage/types';
+import { panelIn } from '@/lib/motion';
 import { FileDropzone } from './FileDropzone';
 import { UploadStatus } from './UploadStatus';
 import { WeekPicker } from './WeekPicker';
@@ -36,7 +39,11 @@ export function UploadPanel({
   onWeekStartChange,
 }: UploadPanelProps) {
   return (
-    <div className='teg-panel p-3 text-cosmo-black md:p-4'>
+    <m.div
+      variants={panelIn}
+      initial={false}
+      animate='visible'
+      className='teg-panel p-3 text-cosmo-black md:p-4'>
       <div className='rounded-[24px] bg-comic-fog p-5 sm:p-8'>
         <div className='mb-6 flex items-start justify-between gap-4'>
           <div>
@@ -74,6 +81,6 @@ export function UploadPanel({
           />
         </div>
       </div>
-    </div>
+    </m.div>
   );
 }

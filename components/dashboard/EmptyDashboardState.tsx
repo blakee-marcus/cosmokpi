@@ -1,10 +1,17 @@
 import Link from 'next/link';
+import * as m from 'motion/react-m';
+
+import { panelIn } from '@/lib/motion';
 
 export function EmptyDashboardState() {
   return (
     <>
       <main className='flex min-h-[calc(100dvh-82px)] items-center justify-center bg-off-white px-5 py-10 text-cosmo-black'>
-        <section className='teg-panel w-full max-w-2xl p-8 text-center'>
+        <m.section
+          variants={panelIn}
+          initial={false}
+          animate='visible'
+          className='teg-panel w-full max-w-2xl p-8 text-center'>
           <div className='font-display mx-auto mb-6 flex size-16 items-center justify-center rounded-[22px] bg-primary-web-red text-3xl font-black text-cosmo-white shadow-teg-button-red'>
             ↑
           </div>
@@ -16,7 +23,7 @@ export function EmptyDashboardState() {
           <Link href='/' className='teg-button mt-8 text-sm'>
             Upload CSV
           </Link>
-        </section>
+        </m.section>
       </main>
     </>
   );
