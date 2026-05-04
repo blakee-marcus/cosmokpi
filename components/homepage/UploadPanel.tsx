@@ -45,7 +45,7 @@ export function UploadPanel({
               CSV files stay on this device and are saved only in this browser.
             </p>
           </div>
-          <div className='font-tag rounded-full bg-cosmo-black px-4 py-2 text-xs font-black uppercase text-cosmo-white shadow-[3px_4px_0_0_rgba(0,0,0,0.2)]'>
+          <div className='teg-eyebrow bg-cosmo-black text-cosmo-white shadow-[3px_4px_0_0_rgba(0,0,0,0.2)]'>
             CSV
           </div>
         </div>

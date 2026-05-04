@@ -145,6 +145,7 @@
   --warning: #e8c349;
   --danger: #b3261e;
   --ink-soft: #2b2b2b;
+  --border: 0 0% 89.8%;
   --font-body-stack:
     'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-heading-stack:
@@ -157,6 +158,7 @@
   --shadow-teg-card-strong: 6px 7px 0 0 rgba(0, 0, 0, 0.16);
   --shadow-teg-card-soft: 4px 5px 0 0 rgba(0, 0, 0, 0.08);
   --shadow-teg-card-red: 6px 7px 0 0 var(--primary-web-red-dark);
+  --shadow-teg-panel-hover: 7px 8px 0 0 rgba(0, 0, 0, 0.14);
 }
 
 @media (min-width: 600px) {
@@ -313,6 +315,13 @@ body {
     transform 150ms ease;
 }
 
+.teg-button:disabled,
+.teg-button-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
 .teg-button:hover {
   background: var(--berry);
 }
@@ -364,6 +373,70 @@ body {
   border-radius: 28px;
   box-shadow: var(--shadow-teg-card);
   overflow: visible;
+}
+
+.teg-card {
+  background: var(--cosmo-white);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 28px;
+  box-shadow: var(--shadow-teg-card-soft);
+}
+
+.teg-hero-panel {
+  background: var(--primary-web-red);
+  border-radius: 34px;
+  box-shadow: var(--shadow-teg-card-red);
+  color: var(--cosmo-white);
+}
+
+.teg-eyebrow {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-family: var(--font-body-stack);
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0.5rem 0.75rem;
+  text-transform: uppercase;
+}
+
+.teg-eyebrow-red {
+  background: var(--primary-web-red);
+  box-shadow: var(--shadow-teg-button-red);
+  color: var(--cosmo-white);
+}
+
+.teg-eyebrow-white {
+  background: var(--cosmo-white);
+  color: var(--primary-web-red);
+}
+
+.teg-danger-button {
+  align-items: center;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 18px;
+  color: var(--cosmo-white);
+  display: inline-flex;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.72rem 1.25rem;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.teg-danger-button:hover {
+  background: var(--cosmo-white);
+  color: var(--primary-web-red);
+}
+
+.teg-danger-button:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 3px;
 }
 
 .shadow-teg-card {

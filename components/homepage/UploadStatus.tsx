@@ -90,7 +90,7 @@ export function UploadStatus({
           badge='Checking file'
           tone='waiting'
           title='Preparing report...'
-          description='We’re validating the CSV and building the weekly team view. Nothing has been saved yet.'
+          description='We’re validating the CSV and building the weekly team view. The report will save locally after the file passes validation.'
         />
       </StatusShell>
     );
@@ -122,13 +122,15 @@ export function UploadStatus({
         <div className='space-y-5'>
           <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
             <div className='space-y-3'>
-              <StatusBadge tone='ready'>Ready to save</StatusBadge>
+              <StatusBadge tone='success'>Report saved</StatusBadge>
 
               <div>
-                <p className='font-heading text-xl font-black text-cosmo-black'>Report is ready</p>
+                <p className='font-heading text-xl font-black text-cosmo-black'>
+                  Report saved successfully
+                </p>
                 <p className='mt-1 text-sm font-medium leading-6 text-ink-soft'>
-                  {savedWeek.fileName} is prepared for {savedWeek.weekLabel}. Save it to open the
-                  dashboard and review team performance.
+                  {savedWeek.fileName} is saved locally for {savedWeek.weekLabel}. Open the
+                  dashboard to review the team performance snapshot.
                 </p>
               </div>
 
@@ -140,7 +142,7 @@ export function UploadStatus({
             </div>
 
             <div className='w-fit rounded-[16px] bg-comic-fog px-4 py-3 text-xs font-black uppercase tracking-wide text-ink-soft'>
-              Browser save pending
+              Saved in this browser
             </div>
           </div>
 
@@ -151,15 +153,15 @@ export function UploadStatus({
           </div>
 
           <div className='rounded-[20px] bg-primary-web-red p-4 text-cosmo-white'>
-            <p className='font-heading text-base font-black'>Final step</p>
+            <p className='font-heading text-base font-black'>Ready for review</p>
             <p className='mt-1 text-sm font-semibold leading-6 text-cosmo-white/85'>
-              Save this weekly report, then open the dashboard.
+              Open the dashboard to compare the week, review coaching signals, and export for FLNL.
             </p>
 
             <Link
               href='/dashboard'
               className='mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-cosmo-white px-5 text-sm font-black text-primary-web-red transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cosmo-white/40 sm:w-fit'>
-              Save and open dashboard
+              Open dashboard
             </Link>
           </div>
         </div>
@@ -175,8 +177,8 @@ export function UploadStatus({
         title={selectedFileName ? 'Ready to process' : 'Ready for upload'}
         description={
           selectedFileName
-            ? `${selectedFileName} is selected. Once processing finishes, you’ll be able to save and open the dashboard.`
-            : 'Upload the weekly cOSmo CSV to begin. Nothing is saved until the dashboard opens.'
+            ? `${selectedFileName} is selected. Once processing finishes, the report will save locally and the dashboard will be ready.`
+            : 'Upload the weekly cOSmo CSV to begin. Reports are saved locally only after validation passes.'
         }
       />
     </StatusShell>

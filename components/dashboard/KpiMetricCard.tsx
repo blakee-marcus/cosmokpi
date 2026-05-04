@@ -17,7 +17,7 @@ export const KpiMetricCard = memo(function KpiMetricCard({ metric }: { metric: K
 
   return (
     <article
-      className={`relative flex min-h-[260px] flex-col overflow-hidden rounded-[30px] border-2 p-5 shadow-[0_18px_34px_-26px_rgba(0,0,0,0.45)] transition-transform duration-200 hover:-translate-y-0.5 ${classes.card}`}>
+      className={`relative flex min-h-[260px] flex-col overflow-hidden rounded-[30px] border-2 p-5 shadow-teg-card-soft transition-transform duration-200 hover:-translate-y-0.5 ${classes.card}`}>
       <div className='flex min-h-[104px] flex-col justify-between gap-4'>
         <div className='flex items-start justify-between gap-4'>
           <p className='font-tag max-w-[10.5rem] text-xs font-black uppercase leading-5 tracking-wide opacity-75'>
@@ -30,7 +30,7 @@ export const KpiMetricCard = memo(function KpiMetricCard({ metric }: { metric: K
           </span>
         </div>
 
-        <p className='font-display text-[2.75rem] font-black leading-none tracking-tight'>
+        <p className='font-display text-[2.75rem] font-black leading-none'>
           {formatPercent(metric.value)}
         </p>
       </div>

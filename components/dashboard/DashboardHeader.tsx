@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import Link from 'next/link';
 
 import { removeStoredWeek } from '@/lib/dashboard/storage';
-import type { StoredWeek } from '@/lib/dashboard/types';
+import type {
+  DashboardPeriod,
+  DashboardPeriodOption,
+  DashboardViewMode,
+  StoredWeek,
+} from '@/lib/dashboard/types';
 
 function getNextWeekIdAfterDelete(weeks: StoredWeek[], deletedWeekId: string) {
   const deletedIndex = weeks.findIndex((week) => week.id === deletedWeekId);
@@ -16,14 +20,74 @@ function getNextWeekIdAfterDelete(weeks: StoredWeek[], deletedWeekId: string) {
   return weeks[deletedIndex + 1]?.id ?? weeks[deletedIndex - 1]?.id ?? null;
 }
 
-function ReportWeekPicker({
-  selectedWeek,
-  weeks,
-  onWeekChange,
+function ViewModeToggle({
+  viewMode,
+  onViewModeChange,
 }: {
-  selectedWeek: StoredWeek;
-  weeks: StoredWeek[];
-  onWeekChange: (weekId: string) => void;
+  viewMode: DashboardViewMode;
+  onViewModeChange: (viewMode: DashboardViewMode) => void;
+}) {
+  const options: {
+    label: string;
+    description: string;
+    value: DashboardViewMode;
+  }[] = [
+    {
+      label: 'Weekly',
+      description: 'Recap the week',
+      value: 'weekly',
+    },
+    {
+      label: 'Monthly',
+      description: 'Spot the trend',
+      value: 'monthly',
+    },
+  ];
+
+  return (
+    <div
+      className='grid gap-2 rounded-[24px] border-2 border-cosmo-black/10 bg-cosmo-white p-2 text-cosmo-black sm:grid-cols-2'
+      aria-label='Dashboard view mode'>
+      {options.map((option) => {
+        const isSelected = option.value === viewMode;
+
+        return (
+          <button
+            key={option.value}
+            type='button'
+            aria-pressed={isSelected}
+            onClick={() => onViewModeChange(option.value)}
+            className={`rounded-[18px] px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-web-red/25 ${
+              isSelected
+                ? 'bg-primary-web-red text-cosmo-white shadow-[3px_4px_0_0_var(--primary-web-red-dark)]'
+                : 'bg-off-white text-cosmo-black hover:-translate-y-0.5 hover:bg-cosmo-white hover:shadow-[3px_4px_0_0_rgba(0,0,0,0.10)]'
+            }`}>
+            <span className='font-tag block text-xs font-black uppercase leading-none'>
+              {option.label}
+            </span>
+            <span
+              className={`mt-1 block text-xs font-bold leading-4 ${
+                isSelected ? 'text-cosmo-white/80' : 'text-cosmo-black/55'
+              }`}>
+              {option.description}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReportPeriodPicker({
+  selectedOption,
+  options,
+  viewMode,
+  onOptionChange,
+}: {
+  selectedOption: DashboardPeriodOption;
+  options: DashboardPeriodOption[];
+  viewMode: DashboardViewMode;
+  onOptionChange: (option: DashboardPeriodOption) => void;
 }) {
   const labelId = useId();
   const listboxId = useId();
@@ -31,7 +95,7 @@ function ReportWeekPicker({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
   const selectedIndex = Math.max(
-    weeks.findIndex((week) => week.id === selectedWeek.id),
+    options.findIndex((option) => option.id === selectedOption.id),
     0,
   );
 
@@ -39,14 +103,16 @@ function ReportWeekPicker({
   const [activeIndex, setActiveIndex] = useState(selectedIndex);
 
   useEffect(() => {
-    if (!isOpen) return;
-
     setActiveIndex(selectedIndex);
+  }, [selectedIndex, viewMode]);
+
+  useEffect(() => {
+    if (!isOpen) return;
 
     requestAnimationFrame(() => {
       listboxRef.current?.focus();
     });
-  }, [isOpen, selectedIndex]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -61,23 +127,28 @@ function ReportWeekPicker({
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [isOpen]);
 
-  function handleSelectWeek(weekId: string) {
-    if (weekId !== selectedWeek.id) {
-      onWeekChange(weekId);
+  function handleSelectOption(option: DashboardPeriodOption) {
+    if (option.id !== selectedOption.id) {
+      onOptionChange(option);
     }
 
     setIsOpen(false);
     buttonRef.current?.focus();
   }
 
+  function openListbox() {
+    setActiveIndex(selectedIndex);
+    setIsOpen(true);
+  }
+
   function moveActiveOption(direction: 1 | -1) {
-    if (weeks.length === 0) return;
+    if (options.length === 0) return;
 
     setActiveIndex((currentIndex) => {
       const nextIndex = currentIndex + direction;
 
-      if (nextIndex < 0) return weeks.length - 1;
-      if (nextIndex >= weeks.length) return 0;
+      if (nextIndex < 0) return options.length - 1;
+      if (nextIndex >= options.length) return 0;
 
       return nextIndex;
     });
@@ -86,7 +157,7 @@ function ReportWeekPicker({
   function handleButtonKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      setIsOpen(true);
+      openListbox();
     }
   }
 
@@ -118,23 +189,25 @@ function ReportWeekPicker({
 
     if (event.key === 'End') {
       event.preventDefault();
-      setActiveIndex(Math.max(weeks.length - 1, 0));
+      setActiveIndex(Math.max(options.length - 1, 0));
       return;
     }
 
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      const activeWeek = weeks[activeIndex];
-      if (activeWeek) handleSelectWeek(activeWeek.id);
+      const activeOption = options[activeIndex];
+      if (activeOption) handleSelectOption(activeOption);
     }
   }
 
+  const pickerLabel = viewMode === 'monthly' ? 'Active month' : 'Active week';
+
   return (
-    <div ref={pickerRef} className='relative w-full sm:w-72'>
+    <div ref={pickerRef} className='relative'>
       <span
         id={labelId}
-        className='font-tag mb-2 block text-xs font-black uppercase text-cosmo-white/80'>
-        Report week
+        className='font-tag mb-2 block text-xs font-black uppercase text-cosmo-white/75'>
+        {pickerLabel}
       </span>
 
       <button
@@ -144,15 +217,22 @@ function ReportWeekPicker({
         aria-haspopup='listbox'
         aria-expanded={isOpen}
         aria-controls={listboxId}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+            return;
+          }
+
+          openListbox();
+        }}
         onKeyDown={handleButtonKeyDown}
         className='group flex h-14 w-full items-center justify-between gap-3 rounded-[20px] border-2 border-cosmo-black bg-cosmo-white px-4 text-left text-cosmo-black shadow-[4px_5px_0_0_rgba(0,0,0,0.20)] transition hover:-translate-y-0.5 hover:shadow-[5px_6px_0_0_rgba(0,0,0,0.22)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cosmo-white/45'>
         <span className='min-w-0'>
           <span className='block truncate text-sm font-black leading-none'>
-            {selectedWeek.weekLabel}
+            {selectedOption.label}
           </span>
           <span className='mt-1 block truncate text-xs font-bold leading-none text-cosmo-black/60'>
-            {selectedWeek.storeName}
+            {selectedOption.detail}
           </span>
         </span>
 
@@ -173,10 +253,12 @@ function ReportWeekPicker({
         <div className='absolute right-0 z-30 mt-3 w-full min-w-[18rem] rounded-[28px] border-2 border-cosmo-black bg-cosmo-white p-2 text-cosmo-black shadow-[7px_8px_0_0_rgba(0,0,0,0.22)]'>
           <div className='border-b-2 border-cosmo-black/10 px-4 py-3'>
             <p className='font-tag text-xs font-black uppercase tracking-wide text-primary-web-red'>
-              Choose snapshot
+              Choose {viewMode === 'monthly' ? 'month' : 'week'}
             </p>
             <p className='mt-1 text-xs font-bold text-cosmo-black/60'>
-              Switch between saved weekly reports.
+              {viewMode === 'monthly'
+                ? 'Monthly view groups saved weekly reports into one trend snapshot.'
+                : 'Weekly view focuses the dashboard on one saved report.'}
             </p>
           </div>
 
@@ -189,18 +271,18 @@ function ReportWeekPicker({
             aria-activedescendant={`${listboxId}-option-${activeIndex}`}
             onKeyDown={handleListboxKeyDown}
             className='mt-2 max-h-72 overflow-y-auto rounded-[20px] p-1 focus-visible:outline-none'>
-            {weeks.map((week, index) => {
-              const isSelected = week.id === selectedWeek.id;
+            {options.map((option, index) => {
+              const isSelected = option.id === selectedOption.id;
               const isActive = index === activeIndex;
 
               return (
                 <li
                   id={`${listboxId}-option-${index}`}
-                  key={week.id}
+                  key={option.id}
                   role='option'
                   aria-selected={isSelected}
                   onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => handleSelectWeek(week.id)}
+                  onClick={() => handleSelectOption(option)}
                   className={`flex cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 transition ${
                     isSelected
                       ? 'bg-primary-web-red text-cosmo-white shadow-[3px_4px_0_0_var(--primary-web-red-dark)]'
@@ -210,13 +292,13 @@ function ReportWeekPicker({
                   }`}>
                   <span className='min-w-0'>
                     <span className='block truncate text-sm font-black leading-none'>
-                      {week.weekLabel}
+                      {option.label}
                     </span>
                     <span
                       className={`mt-1 block truncate text-xs font-bold leading-none ${
                         isSelected ? 'text-cosmo-white/75' : 'text-cosmo-black/55'
                       }`}>
-                      {week.storeName}
+                      {option.detail}
                     </span>
                   </span>
 
@@ -241,14 +323,26 @@ function ReportWeekPicker({
 }
 
 export function DashboardHeader({
+  selectedPeriod,
   selectedWeek,
   weeks,
-  onWeekChange,
+  viewMode,
+  periodOptions,
+  selectedPeriodOption,
+  onViewModeChange,
+  onPeriodOptionChange,
+  onSelectedWeekChange,
   onExportSelectedWeek,
 }: {
+  selectedPeriod: DashboardPeriod;
   selectedWeek: StoredWeek;
   weeks: StoredWeek[];
-  onWeekChange: (weekId: string) => void;
+  viewMode: DashboardViewMode;
+  periodOptions: DashboardPeriodOption[];
+  selectedPeriodOption: DashboardPeriodOption;
+  onViewModeChange: (viewMode: DashboardViewMode) => void;
+  onPeriodOptionChange: (option: DashboardPeriodOption) => void;
+  onSelectedWeekChange: (weekId: string) => void;
   onExportSelectedWeek: () => void;
 }) {
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
@@ -260,56 +354,95 @@ export function DashboardHeader({
     setIsRemoveModalOpen(false);
 
     if (nextStorage.latestWeekId) {
-      onWeekChange(nextStorage.latestWeekId);
+      onSelectedWeekChange(nextStorage.latestWeekId);
     }
   }
 
+  const isMonthly = selectedPeriod.periodType === 'monthly';
+  const periodDescriptor = isMonthly ? 'monthly' : 'weekly';
+  const reportCountLabel =
+    selectedPeriod.includedWeekCount === 1
+      ? '1 saved report'
+      : `${selectedPeriod.includedWeekCount} saved reports`;
+
   return (
     <>
-      <div className='flex items-center justify-between gap-4'>
-        <Link
-          href='/'
-          className='font-heading text-xl font-black text-cosmo-black focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-web-red/30'>
-          cOSmo KPI
-        </Link>
+      <header className='teg-hero-panel overflow-visible p-5 sm:p-6 lg:p-8'>
+        <div className='grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-end'>
+          <div>
+            <div className='teg-eyebrow teg-eyebrow-white mb-4'>
+              {selectedPeriod.storeName} {periodDescriptor} KPI review
+            </div>
 
-        <Link href='/' className='teg-button-secondary text-sm'>
-          Upload another CSV
-        </Link>
-      </div>
+            <h1 className='font-display text-4xl font-black leading-none sm:text-5xl lg:text-6xl'>
+              {isMonthly ? 'Spot the trend' : 'Recap the week'}
+            </h1>
 
-      <header className='rounded-[32px] bg-primary-web-red p-6 text-cosmo-white shadow-teg-card-red lg:flex lg:items-end lg:justify-between lg:gap-8 lg:p-8'>
-        <div>
-          <div className='font-tag mb-4 inline-flex rounded-full bg-cosmo-white px-4 py-2 text-sm font-black uppercase text-primary-web-red'>
-            {selectedWeek.storeName} leadership snapshot
+            <p className='mt-4 max-w-3xl text-base font-medium leading-7 text-cosmo-white/90'>
+              {isMonthly
+                ? `Viewing ${selectedPeriod.periodLabel} across ${reportCountLabel}. Use this view to see what is changing, where we are winning, and what needs a clearer leadership focus.`
+                : `Viewing ${selectedWeek.weekLabel}. Use this view to celebrate wins, identify the clearest follow-up, and turn weekly results into focused team communication.`}
+            </p>
+
+            {isMonthly ? (
+              <div className='mt-5 rounded-[24px] border-2 border-cosmo-white/20 bg-cosmo-white/10 p-4'>
+                <p className='font-tag text-xs font-black uppercase text-cosmo-white/70'>
+                  Weekly report still selected
+                </p>
+                <p className='mt-1 text-sm font-bold leading-6 text-cosmo-white/90'>
+                  Export and cleanup actions apply to {selectedWeek.weekLabel}. Monthly view is for
+                  trend review only.
+                </p>
+              </div>
+            ) : null}
           </div>
 
-          <h1 className='font-display text-4xl font-black leading-none sm:text-5xl lg:text-6xl'>
-            Weekly KPI coaching dashboard
-          </h1>
+          <div className='rounded-[30px] border-2 border-cosmo-white/25 bg-cosmo-black/15 p-4 backdrop-blur'>
+            <div className='mb-4'>
+              <p className='font-tag text-xs font-black uppercase text-cosmo-white/70'>
+                Review mode
+              </p>
+              <p className='mt-1 text-sm font-bold leading-5 text-cosmo-white/90'>
+                Choose a weekly recap or monthly trend view before taking action.
+              </p>
+            </div>
 
-          <p className='mt-4 max-w-3xl text-base font-medium leading-7 text-cosmo-white/90'>
-            Viewing {selectedWeek.weekLabel}. Use this data to celebrate strong examples, identify
-            coaching opportunities, and prepare a clear FLNL-ready performance snapshot.
-          </p>
-        </div>
+            <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
 
-        <div className='mt-6 flex flex-col gap-3 sm:flex-row sm:items-end lg:mt-0'>
-          <ReportWeekPicker selectedWeek={selectedWeek} weeks={weeks} onWeekChange={onWeekChange} />
+            <div className='mt-4'>
+              <ReportPeriodPicker
+                selectedOption={selectedPeriodOption}
+                options={periodOptions}
+                viewMode={viewMode}
+                onOptionChange={onPeriodOptionChange}
+              />
+            </div>
 
-          <button
-            type='button'
-            onClick={onExportSelectedWeek}
-            className='teg-button-secondary inline-flex h-12 min-w-[190px] items-center justify-center whitespace-nowrap !rounded-[18px] !px-5 text-sm font-black leading-none'>
-            Export selected week
-          </button>
+            <div className='mt-4 rounded-[24px] border-2 border-cosmo-white/20 bg-cosmo-white/10 p-3'>
+              <p className='font-tag text-xs font-black uppercase text-cosmo-white/70'>
+                Report actions
+              </p>
+              <p className='mt-1 truncate text-sm font-black text-cosmo-white'>
+                {selectedWeek.weekLabel}
+              </p>
 
-          <button
-            type='button'
-            onClick={() => setIsRemoveModalOpen(true)}
-            className='inline-flex h-12 min-w-[140px] items-center justify-center whitespace-nowrap rounded-[18px] border-2 border-cosmo-white/70 bg-transparent px-5 text-sm font-black leading-none text-cosmo-white transition hover:bg-cosmo-white hover:text-primary-web-red focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cosmo-white/40'>
-            Remove week
-          </button>
+              <div className='mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-1'>
+                <button
+                  type='button'
+                  onClick={onExportSelectedWeek}
+                  className='inline-flex h-12 items-center justify-center rounded-[18px] border-2 border-cosmo-black bg-cosmo-white px-4 text-sm font-black leading-none text-primary-web-red shadow-[3px_4px_0_0_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cosmo-white/45'>
+                  Export weekly recap
+                </button>
+
+                <button
+                  type='button'
+                  onClick={() => setIsRemoveModalOpen(true)}
+                  className='inline-flex h-12 items-center justify-center rounded-[18px] border-2 border-cosmo-white/40 bg-cosmo-black/20 px-4 text-sm font-black leading-none text-cosmo-white transition hover:bg-cosmo-black/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cosmo-white/35'>
+                  Remove local report
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -330,19 +463,19 @@ export function DashboardHeader({
             </p>
 
             <h2 id='remove-week-title' className='font-display mt-3 text-3xl font-black'>
-              Remove {selectedWeek.weekLabel}?
+              Remove this saved report?
             </h2>
 
             <p
               id='remove-week-description'
               className='mt-4 text-sm font-semibold leading-6 text-cosmo-black/70'>
-              This will only remove the saved report from this browser. It will not affect the
-              original CSV, company systems, or any source data.
+              This only removes the report from this browser. Your original CSV, company systems,
+              and source data will stay unchanged.
             </p>
 
             <div className='mt-6 rounded-[22px] border-2 border-cosmo-black/10 bg-off-white p-4'>
               <p className='font-tag text-xs font-black uppercase tracking-wide text-cosmo-black/60'>
-                Report being removed
+                Selected report
               </p>
               <p className='mt-1 font-heading text-lg font-black text-cosmo-black'>
                 {selectedWeek.weekLabel} · {selectedWeek.storeName}
@@ -361,7 +494,7 @@ export function DashboardHeader({
                 type='button'
                 onClick={handleConfirmRemoveWeek}
                 className='inline-flex h-12 items-center justify-center rounded-[18px] border-2 border-cosmo-black bg-primary-web-red px-5 text-sm font-black text-cosmo-white shadow-[4px_5px_0_0_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-web-red/30'>
-                Yes, remove week
+                Remove report
               </button>
             </div>
           </section>

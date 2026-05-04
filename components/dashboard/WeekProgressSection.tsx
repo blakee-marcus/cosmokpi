@@ -7,11 +7,11 @@ import {
   getProgressStatus,
   getProgressSummary,
 } from '@/lib/dashboard/metrics';
-import type { StoredWeek, WeekProgressMetric } from '@/lib/dashboard/types';
+import type { DashboardPeriod, WeekProgressMetric } from '@/lib/dashboard/types';
 
 type WeekProgressSectionProps = Readonly<{
-  selectedWeek: StoredWeek;
-  previousWeek: StoredWeek | null;
+  selectedPeriod: DashboardPeriod;
+  previousPeriod: DashboardPeriod | null;
   metrics: WeekProgressMetric[];
 }>;
 
@@ -36,6 +36,7 @@ type ProgressSummaryStatsProps = Readonly<{
 type ProgressComparisonPanelProps = Readonly<{
   metrics: WeekProgressMetric[];
   progressSummary: ProgressSummary;
+  periodName: string;
 }>;
 
 const BORDER_ROW_CLASS = 'border-b-2 border-cosmo-black/5';
@@ -85,13 +86,15 @@ function ProgressSummaryStats({ progressSummary }: ProgressSummaryStatsProps) {
   );
 }
 
-function EmptyProgressState({ storeName }: { storeName: string }) {
+function EmptyProgressState({ periodName, storeName }: { periodName: string; storeName: string }) {
   return (
     <div className='p-5'>
       <div className='rounded-[24px] border-2 border-dashed border-cosmo-black/20 bg-cosmo-white p-6'>
-        <p className='font-heading text-xl font-black text-cosmo-black'>No prior week yet</p>
+        <p className='font-heading text-xl font-black text-cosmo-black'>
+          No prior {periodName} yet
+        </p>
         <p className='mt-2 max-w-2xl text-sm font-medium leading-6 text-ink-soft'>
-          Add another saved week for {storeName} to compare KPI movement and identify the next
+          Add another saved {periodName} for {storeName} to compare KPI movement and identify the next
           leadership follow-up.
         </p>
       </div>
@@ -167,7 +170,11 @@ function ProgressTable({ metrics }: { metrics: WeekProgressMetric[] }) {
   );
 }
 
-function ProgressComparisonPanel({ metrics, progressSummary }: ProgressComparisonPanelProps) {
+function ProgressComparisonPanel({
+  metrics,
+  periodName,
+  progressSummary,
+}: ProgressComparisonPanelProps) {
   return (
     <div className='grid gap-5 p-5 xl:grid-cols-[0.72fr_1.28fr]'>
       <aside className='relative h-full min-w-0 rounded-[28px]'>
@@ -186,7 +193,7 @@ function ProgressComparisonPanel({ metrics, progressSummary }: ProgressCompariso
           </p>
 
           <p className='mt-2 text-sm font-semibold leading-6 text-cosmo-white/80'>
-            store KPIs improved compared with the prior saved week.
+            store KPIs improved compared with the prior saved {periodName}.
           </p>
 
           <div className='mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1'>
@@ -211,33 +218,35 @@ function ProgressComparisonPanel({ metrics, progressSummary }: ProgressCompariso
 }
 
 export const WeekProgressSection = memo(function WeekProgressSection({
-  selectedWeek,
-  previousWeek,
+  selectedPeriod,
+  previousPeriod,
   metrics,
 }: WeekProgressSectionProps) {
-  const progressSummary = previousWeek ? getProgressSummary(metrics) : null;
+  const progressSummary = previousPeriod ? getProgressSummary(metrics) : null;
+  const periodName = selectedPeriod.periodType === 'monthly' ? 'month' : 'week';
+  const periodLabel = selectedPeriod.periodType === 'monthly' ? 'Month-to-month' : 'Week-to-week';
 
   return (
-    <section className='snappy-section overflow-hidden rounded-[32px] border-2 border-cosmo-black/10 bg-cosmo-white text-cosmo-black shadow-[6px_7px_0_0_rgba(0,0,0,0.08)]'>
+    <section className='snappy-section teg-card overflow-hidden text-cosmo-black'>
       <div className='border-b-2 border-cosmo-black/10 bg-comic-fog/70 px-5 py-6 sm:px-6 lg:px-7'>
         <div className='grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end'>
           <div className='max-w-3xl'>
             <div className='inline-flex rounded-full border-2 border-primary-web-red/15 bg-cosmo-white px-3 py-1'>
               <p className='font-tag text-xs font-black uppercase tracking-wide text-primary-web-red'>
-                Week-to-week progress
+                {periodLabel} progress
               </p>
             </div>
 
             <h2 className='mt-4 font-heading text-2xl font-black leading-tight sm:text-3xl'>
-              {previousWeek
-                ? `${selectedWeek.weekLabel} vs ${previousWeek.weekLabel}`
-                : 'Build the next weekly comparison'}
+              {previousPeriod
+                ? `${selectedPeriod.periodLabel} vs ${previousPeriod.periodLabel}`
+                : `Build the next ${periodName}ly comparison`}
             </h2>
 
             <p className='mt-2 text-sm font-medium leading-6 text-ink-soft sm:text-base'>
-              {previousWeek
-                ? `Review ${selectedWeek.storeName} movement across saved KPI reports and identify where leadership follow-through is needed next.`
-                : `Add another saved week for ${selectedWeek.storeName} to unlock KPI movement, trend context, and follow-up priorities.`}
+              {previousPeriod
+                ? `Review ${selectedPeriod.storeName} movement across saved KPI reports and identify where leadership follow-through is needed next.`
+                : `Add another saved ${periodName} for ${selectedPeriod.storeName} to unlock KPI movement, trend context, and follow-up priorities.`}
             </p>
           </div>
 
@@ -251,9 +260,13 @@ export const WeekProgressSection = memo(function WeekProgressSection({
 
       <div className='bg-cosmo-white p-5 sm:p-6 lg:p-7'>
         {progressSummary ? (
-          <ProgressComparisonPanel metrics={metrics} progressSummary={progressSummary} />
+          <ProgressComparisonPanel
+            metrics={metrics}
+            periodName={periodName}
+            progressSummary={progressSummary}
+          />
         ) : (
-          <EmptyProgressState storeName={selectedWeek.storeName} />
+          <EmptyProgressState periodName={periodName} storeName={selectedPeriod.storeName} />
         )}
       </div>
     </section>

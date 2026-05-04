@@ -60,6 +60,34 @@ export type StoredWeek = {
   employees: EmployeeKpiRow[];
 };
 
+export type DashboardViewMode = 'weekly' | 'monthly';
+
+export type DashboardPeriod = {
+  id: string;
+  periodType: DashboardViewMode;
+  periodLabel: string;
+  storeName: string;
+  includedWeekCount: number;
+  includedWeekLabels: string[];
+  anchorWeekId: string;
+  weekIds: string[];
+  weeks: StoredWeek[];
+  aggregateWeek: StoredWeek;
+  totals: StoredWeek['totals'];
+  employees: EmployeeKpiRow[];
+  monthKey?: string;
+};
+
+export type DashboardPeriodOption = {
+  id: string;
+  label: string;
+  storeName: string;
+  detail: string;
+  anchorWeekId: string;
+  periodType: DashboardViewMode;
+  period: DashboardPeriod;
+};
+
 export type KpiStorage = {
   version: 1;
   latestWeekId: string | null;
@@ -113,3 +141,4 @@ export type SortKey =
   | 'reviewsAskedPercent'
   | 'sharedReplayPercent'
   | 'previewsPercent';
+

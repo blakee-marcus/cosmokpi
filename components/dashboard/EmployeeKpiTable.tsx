@@ -14,7 +14,11 @@ import {
   getStatusClasses,
   getStatusLabel,
 } from '@/lib/dashboard/metrics';
-import type { EmployeeKpiRow, SortKey, StoredWeek } from '@/lib/dashboard/types';
+import type {
+  DashboardViewMode,
+  EmployeeKpiRow,
+  SortKey,
+} from '@/lib/dashboard/types';
 
 const EmployeePercentCell = memo(function EmployeePercentCell({
   value,
@@ -51,13 +55,20 @@ const EmployeePercentCell = memo(function EmployeePercentCell({
 const EmployeeProgressCell = memo(function EmployeeProgressCell({
   employee,
   previousEmployee,
-  hasPreviousWeek,
+  hasPreviousPeriod,
+  periodName,
 }: {
   employee: EmployeeKpiRow;
   previousEmployee?: EmployeeKpiRow;
-  hasPreviousWeek: boolean;
+  hasPreviousPeriod: boolean;
+  periodName: string;
 }) {
-  const summary = getEmployeeProgressSummary(employee, previousEmployee, hasPreviousWeek);
+  const summary = getEmployeeProgressSummary(
+    employee,
+    previousEmployee,
+    hasPreviousPeriod,
+    periodName,
+  );
   const classes = summary.status ? getProgressClasses(summary.status) : null;
 
   return (
@@ -80,12 +91,14 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
   employee,
   index,
   previousEmployee,
-  hasPreviousWeek,
+  hasPreviousPeriod,
+  periodName,
 }: {
   employee: EmployeeKpiRow;
   index: number;
   previousEmployee?: EmployeeKpiRow;
-  hasPreviousWeek: boolean;
+  hasPreviousPeriod: boolean;
+  periodName: string;
 }) {
   const rowTone = index % 2 === 0 ? 'bg-cosmo-white' : 'bg-off-white';
 
@@ -126,7 +139,8 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
         <EmployeeProgressCell
           employee={employee}
           previousEmployee={previousEmployee}
-          hasPreviousWeek={hasPreviousWeek}
+          hasPreviousPeriod={hasPreviousPeriod}
+          periodName={periodName}
         />
       </td>
 
@@ -164,7 +178,8 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
 export function EmployeeKpiTable({
   filteredEmployees,
   previousEmployeeByKey,
-  previousWeek,
+  hasPreviousPeriod,
+  viewMode,
   searchTerm,
   sortKey,
   onSearchTermChange,
@@ -172,12 +187,16 @@ export function EmployeeKpiTable({
 }: {
   filteredEmployees: EmployeeKpiRow[];
   previousEmployeeByKey: Map<string, EmployeeKpiRow>;
-  previousWeek: StoredWeek | null;
+  hasPreviousPeriod: boolean;
+  viewMode: DashboardViewMode;
   searchTerm: string;
   sortKey: SortKey;
   onSearchTermChange: (value: string) => void;
   onSortKeyChange: (value: SortKey) => void;
 }) {
+  const periodName = viewMode === 'monthly' ? 'month' : 'week';
+  const rankingPeriodLabel = viewMode === 'monthly' ? 'this month' : 'this week';
+
   return (
     <section className='snappy-section teg-panel overflow-hidden text-cosmo-black'>
       <div className='flex flex-col gap-4 border-b-2 border-cosmo-black/10 bg-comic-fog p-5 lg:flex-row lg:items-center lg:justify-between'>
@@ -187,8 +206,8 @@ export function EmployeeKpiTable({
           </p>
           <h2 className='font-heading mt-2 text-2xl font-black'>Team member KPI table</h2>
           <p className='mt-1 text-sm font-medium text-ink-soft'>
-            Ranking includes team members with at least {MINIMUM_GAMES_FOR_RANKING} games so
-            follow-up stays fair and useful.
+            Ranking includes team members with at least {MINIMUM_GAMES_FOR_RANKING} games in{' '}
+            {rankingPeriodLabel} so follow-up stays fair and useful.
           </p>
         </div>
 
@@ -240,7 +259,7 @@ export function EmployeeKpiTable({
                       Guests
                     </th>
                     <th scope='col' className='bg-primary-web-red px-5 py-4 font-black'>
-                      Week change
+                      Period change
                     </th>
                     <th scope='col' className='bg-primary-web-red px-5 py-4 font-black'>
                       Replay
@@ -266,7 +285,8 @@ export function EmployeeKpiTable({
                       previousEmployee={previousEmployeeByKey.get(
                         getEmployeeComparisonKey(employee),
                       )}
-                      hasPreviousWeek={Boolean(previousWeek)}
+                      hasPreviousPeriod={hasPreviousPeriod}
+                      periodName={periodName}
                     />
                   ))}
                 </tbody>

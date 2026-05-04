@@ -18,16 +18,29 @@ import {
   findPreviousWeekForStore,
   getTopEmployee,
 } from '@/lib/dashboard/metrics';
+import {
+  buildMonthlyPeriod,
+  buildWeeklyPeriod,
+  findPreviousMonthlyPeriod,
+  getMonthlyPeriodOptions,
+  getWeeklyPeriodOptions,
+} from '@/lib/dashboard/monthly';
 import { exportWeekForNewsletter } from '@/lib/dashboard/newsletter-export';
 import { getStorageSnapshot, subscribeToStorage } from '@/lib/dashboard/storage';
-import type { EmployeeKpiRow, KpiCard, SortKey } from '@/lib/dashboard/types';
-
-type StoredDashboardWeek = (typeof EMPTY_STORAGE)['weeks'][number];
+import type {
+  DashboardPeriod,
+  DashboardPeriodOption,
+  DashboardViewMode,
+  EmployeeKpiRow,
+  KpiCard,
+  SortKey,
+  StoredWeek,
+} from '@/lib/dashboard/types';
 
 const DEFAULT_SORT_KEY: SortKey = 'replaysSoldPercent';
 
 function getSelectedWeek(
-  weeks: StoredDashboardWeek[],
+  weeks: StoredWeek[],
   selectedWeekId: string,
   latestWeekId?: string | null,
 ) {
@@ -36,10 +49,10 @@ function getSelectedWeek(
   return weeks.find((week) => week.id === activeWeekId) ?? weeks[0] ?? null;
 }
 
-function buildPreviousEmployeeMap(previousWeek: StoredDashboardWeek | null) {
+function buildPreviousEmployeeMap(previousPeriod: DashboardPeriod | null) {
   const employeesByKey = new Map<string, EmployeeKpiRow>();
 
-  previousWeek?.employees.forEach((employee) => {
+  previousPeriod?.employees.forEach((employee) => {
     employeesByKey.set(getEmployeeComparisonKey(employee), employee);
   });
 
@@ -82,6 +95,7 @@ function filterEmployees(employees: EmployeeKpiRow[], searchTerm: string) {
 export default function DashboardPage() {
   const storage = useSyncExternalStore(subscribeToStorage, getStorageSnapshot, () => EMPTY_STORAGE);
 
+  const [viewMode, setViewMode] = useState<DashboardViewMode>('weekly');
   const [selectedWeekId, setSelectedWeekId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
@@ -93,34 +107,66 @@ export default function DashboardPage() {
     [selectedWeekId, storage.latestWeekId, storage.weeks],
   );
 
-  const previousWeek = useMemo(() => {
+  const selectedPeriod = useMemo<DashboardPeriod | null>(() => {
     if (!selectedWeek) return null;
 
-    return findPreviousWeekForStore(storage.weeks, selectedWeek);
-  }, [selectedWeek, storage.weeks]);
+    if (viewMode === 'monthly') {
+      return buildMonthlyPeriod(storage.weeks, selectedWeek);
+    }
+
+    return buildWeeklyPeriod(selectedWeek);
+  }, [selectedWeek, storage.weeks, viewMode]);
+
+  const previousPeriod = useMemo<DashboardPeriod | null>(() => {
+    if (!selectedWeek || !selectedPeriod) return null;
+
+    if (viewMode === 'monthly') {
+      return findPreviousMonthlyPeriod(storage.weeks, selectedPeriod);
+    }
+
+    const previousWeek = findPreviousWeekForStore(storage.weeks, selectedWeek);
+
+    return previousWeek ? buildWeeklyPeriod(previousWeek) : null;
+  }, [selectedPeriod, selectedWeek, storage.weeks, viewMode]);
+
+  const periodOptions = useMemo<DashboardPeriodOption[]>(() => {
+    if (viewMode === 'monthly') {
+      return getMonthlyPeriodOptions(storage.weeks);
+    }
+
+    return getWeeklyPeriodOptions(storage.weeks);
+  }, [storage.weeks, viewMode]);
+
+  const selectedPeriodOption = useMemo(() => {
+    if (!selectedPeriod) return periodOptions[0] ?? null;
+
+    return (
+      periodOptions.find((option) => option.id === selectedPeriod.id) ?? periodOptions[0] ?? null
+    );
+  }, [periodOptions, selectedPeriod]);
 
   const dashboardMetrics = useMemo<KpiCard[]>(() => {
-    if (!selectedWeek) return [];
+    if (!selectedPeriod) return [];
 
-    return buildDashboardMetrics(selectedWeek);
-  }, [selectedWeek]);
+    return buildDashboardMetrics(selectedPeriod);
+  }, [selectedPeriod]);
 
   const weekProgressMetrics = useMemo(() => {
-    if (!selectedWeek || !previousWeek) return [];
+    if (!selectedPeriod || !previousPeriod) return [];
 
-    return buildWeekProgressMetrics(selectedWeek, previousWeek);
-  }, [previousWeek, selectedWeek]);
+    return buildWeekProgressMetrics(selectedPeriod, previousPeriod);
+  }, [previousPeriod, selectedPeriod]);
 
   const previousEmployeeByKey = useMemo(
-    () => buildPreviousEmployeeMap(previousWeek),
-    [previousWeek],
+    () => buildPreviousEmployeeMap(previousPeriod),
+    [previousPeriod],
   );
 
   const rankedEmployees = useMemo(() => {
-    if (!selectedWeek) return [];
+    if (!selectedPeriod) return [];
 
-    return rankEmployees(selectedWeek.employees, sortKey);
-  }, [selectedWeek, sortKey]);
+    return rankEmployees(selectedPeriod.employees, sortKey);
+  }, [selectedPeriod, sortKey]);
 
   const filteredEmployees = useMemo(
     () => filterEmployees(rankedEmployees, deferredSearchTerm),
@@ -136,11 +182,44 @@ export default function DashboardPage() {
     [rankedEmployees],
   );
 
-  const handleWeekChange = useCallback((nextWeekId: string) => {
-    setSelectedWeekId(nextWeekId);
+  const resetTableControls = useCallback(() => {
     setSearchTerm('');
     setSortKey(DEFAULT_SORT_KEY);
   }, []);
+
+  const handlePeriodOptionChange = useCallback(
+    (option: DashboardPeriodOption) => {
+      const nextSelectedWeek = storage.weeks.find((week) => {
+        if (viewMode === 'monthly') {
+          return buildMonthlyPeriod(storage.weeks, week)?.id === option.id;
+        }
+
+        return buildWeeklyPeriod(week).id === option.id;
+      });
+
+      if (!nextSelectedWeek) return;
+
+      setSelectedWeekId(nextSelectedWeek.id);
+      resetTableControls();
+    },
+    [resetTableControls, storage.weeks, viewMode],
+  );
+
+  const handleSelectedWeekChange = useCallback(
+    (nextWeekId: string) => {
+      setSelectedWeekId(nextWeekId);
+      resetTableControls();
+    },
+    [resetTableControls],
+  );
+
+  const handleViewModeChange = useCallback(
+    (nextViewMode: DashboardViewMode) => {
+      setViewMode(nextViewMode);
+      resetTableControls();
+    },
+    [resetTableControls],
+  );
 
   const handleSearchTermChange = useCallback((nextSearchTerm: string) => {
     setSearchTerm(nextSearchTerm);
@@ -152,31 +231,35 @@ export default function DashboardPage() {
     exportWeekForNewsletter(selectedWeek);
   }, [selectedWeek]);
 
-  if (!selectedWeek) {
+  if (!selectedWeek || !selectedPeriod || !selectedPeriodOption) {
     return <EmptyDashboardState />;
   }
 
   return (
     <main
       id='main-content'
-      className='min-h-dvh bg-off-white px-5 py-6 text-cosmo-black sm:px-8 lg:px-14'>
-      <section
-        aria-label='Weekly KPI dashboard'
-        className='mx-auto w-full max-w-[1440px] space-y-8'>
+      className='min-h-[calc(100dvh-82px)] bg-off-white px-5 py-8 text-cosmo-black sm:px-8 lg:px-14'>
+      <section aria-label='KPI dashboard' className='mx-auto w-full max-w-[1440px] space-y-8'>
         <DashboardHeader
+          selectedPeriod={selectedPeriod}
           selectedWeek={selectedWeek}
           weeks={storage.weeks}
-          onWeekChange={handleWeekChange}
+          viewMode={viewMode}
+          periodOptions={periodOptions}
+          selectedPeriodOption={selectedPeriodOption}
+          onViewModeChange={handleViewModeChange}
+          onPeriodOptionChange={handlePeriodOptionChange}
+          onSelectedWeekChange={handleSelectedWeekChange}
           onExportSelectedWeek={handleExportSelectedWeek}
         />
 
-        <StatsGrid selectedWeek={selectedWeek} />
+        <StatsGrid selectedPeriod={selectedPeriod} />
 
         <KpiMetricGrid metrics={dashboardMetrics} />
 
         <WeekProgressSection
-          selectedWeek={selectedWeek}
-          previousWeek={previousWeek}
+          selectedPeriod={selectedPeriod}
+          previousPeriod={previousPeriod}
           metrics={weekProgressMetrics}
         />
 
@@ -188,8 +271,9 @@ export default function DashboardPage() {
 
         <EmployeeKpiTable
           filteredEmployees={filteredEmployees}
+          hasPreviousPeriod={Boolean(previousPeriod)}
           previousEmployeeByKey={previousEmployeeByKey}
-          previousWeek={previousWeek}
+          viewMode={viewMode}
           searchTerm={searchTerm}
           sortKey={sortKey}
           onSearchTermChange={handleSearchTermChange}

@@ -1,5 +1,6 @@
 'use client';
 
+import { TEG_CANVAS_COLORS as brand, TEG_CANVAS_FONT as font } from '@/lib/brand';
 import { KPI_GOALS } from './constants';
 import {
   formatNewsletterPercent,
@@ -14,29 +15,6 @@ import type { StoredWeek } from './types';
 type EmployeeRow = StoredWeek['employees'][number];
 
 const EXPORT_SCALE = 2;
-
-const brand = {
-  background: '#F5F6FA',
-  surface: '#FFFFFF',
-  red: '#FB2D61',
-  redSoft: '#FFE8EF',
-  black: '#000000',
-  ink: '#2B2B2B',
-  muted: '#6E6E6E',
-  line: '#DADDE5',
-  rowAlt: '#FAFBFD',
-  green: '#29892A',
-  greenSoft: '#EAF6EA',
-  yellow: '#B89116',
-  yellowSoft: '#FFF5D2',
-  danger: '#B3261E',
-  dangerSoft: '#FCE8E6',
-} as const;
-
-const font = {
-  heading: 'Tenon, "DM Sans", Arial, sans-serif',
-  body: '"DM Sans", Arial, sans-serif',
-} as const;
 
 function drawRoundedRect(
   context: CanvasRenderingContext2D,

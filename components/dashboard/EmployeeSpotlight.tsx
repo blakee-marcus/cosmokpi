@@ -21,7 +21,7 @@ export const EmployeeSpotlight = memo(function EmployeeSpotlight({
   const hasData = Boolean(employee);
 
   return (
-    <article className='rounded-[28px] border-2 border-cosmo-black/10 bg-cosmo-white p-5 shadow-[6px_7px_0_0_rgba(0,0,0,0.10)]'>
+    <article className='teg-card p-5'>
       <p className='font-tag text-sm font-black uppercase tracking-wide text-primary-web-red'>
         {label}
       </p>

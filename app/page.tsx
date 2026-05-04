@@ -3,7 +3,6 @@
 import type { ChangeEvent, DragEvent } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { HeroSection } from '@/components/homepage/HeroSection';
-import { HomeHeader } from '@/components/homepage/HomeHeader';
 import { UploadPanel } from '@/components/homepage/UploadPanel';
 import { waitForNextFrame } from '@/lib/homepage/browser';
 import { formatWeekLabel, getMondayDateString } from '@/lib/homepage/dates';
@@ -115,34 +114,34 @@ export default function Home() {
   );
 
   return (
-    <main
-      id='main-content'
-      className='relative min-h-dvh overflow-hidden bg-off-white px-5 py-6 text-cosmo-black sm:px-8 lg:px-14'>
-      <section
-        aria-label='Upload weekly KPI report'
-        className='mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-7xl flex-col justify-center'>
-        <HomeHeader />
+    <>
+      <main
+        id='main-content'
+        className='relative min-h-[calc(100dvh-82px)] overflow-hidden bg-off-white px-5 py-8 text-cosmo-black sm:px-8 lg:px-14'>
+        <section
+          aria-label='Upload weekly KPI report'
+          className='mx-auto flex min-h-[calc(100dvh-9rem)] w-full max-w-7xl flex-col justify-center'>
+          <div className='grid items-center gap-8 lg:grid-cols-[1fr_0.9fr] xl:gap-12'>
+            <HeroSection />
 
-        <div className='grid items-center gap-8 lg:grid-cols-[1fr_0.9fr] xl:gap-12'>
-          <HeroSection />
-
-          <UploadPanel
-            error={uploadState.error}
-            fileInputRef={fileInputRef}
-            isDragging={isDragging}
-            isProcessing={isProcessing}
-            reportTypeLabel={uploadState.reportTypeLabel}
-            savedWeek={uploadState.savedWeek}
-            selectedFileName={uploadState.selectedFileName}
-            weekLabel={weekLabel}
-            weekStart={weekStart}
-            onDragStateChange={setIsDragging}
-            onDrop={handleDrop}
-            onFileInputChange={handleFileInput}
-            onWeekStartChange={handleWeekStartChange}
-          />
-        </div>
-      </section>
-    </main>
+            <UploadPanel
+              error={uploadState.error}
+              fileInputRef={fileInputRef}
+              isDragging={isDragging}
+              isProcessing={isProcessing}
+              reportTypeLabel={uploadState.reportTypeLabel}
+              savedWeek={uploadState.savedWeek}
+              selectedFileName={uploadState.selectedFileName}
+              weekLabel={weekLabel}
+              weekStart={weekStart}
+              onDragStateChange={setIsDragging}
+              onDrop={handleDrop}
+              onFileInputChange={handleFileInput}
+              onWeekStartChange={handleWeekStartChange}
+            />
+          </div>
+        </section>
+      </main>
+    </>
   );
 }

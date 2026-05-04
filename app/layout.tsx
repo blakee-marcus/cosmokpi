@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+
+import { AppHeader } from '@/components/ui/AppHeader';
 import './globals.css';
 
 const APP_NAME = 'TEG KPI Clarity';
@@ -51,7 +53,13 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        <div className='relative flex min-h-dvh flex-col'>{children}</div>
+        <div className='relative flex min-h-dvh flex-col'>
+          <AppHeader />
+
+          <div id='main-content' className='flex-1'>
+            {children}
+          </div>
+        </div>
       </body>
     </html>
   );
