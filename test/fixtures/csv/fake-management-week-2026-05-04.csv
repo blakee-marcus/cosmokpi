@@ -1,0 +1,5 @@
+name,storeName,role,totalGames,guests,replaysSold,SUEs,reviewsAsked,sharedReplay,afterGamePreviews,replaysSoldPercent,suePercent,reviewsAskedPercent,sharedReplayPercent,previewsPercent
+Alex Arcade,Training Store North,Game Guide,12,28,5,9,11,10,8,17.86,75,91.67,83.33,66.67
+Blair Beacon,Training Store North,Team Leader,9,20,4,8,9,9,9,20,88.89,100,100,100
+Casey Circuit,Training Store North,Game Guide,6,16,2,4,5,5,4,12.5,66.67,83.33,83.33,66.67
+Morgan Mentor,Training Store North,Assistant Manager,5,10,1,5,5,5,5,10,100,100,100,100

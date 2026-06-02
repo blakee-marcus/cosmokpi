@@ -131,6 +131,11 @@ export type StoredWeekExtended = {
   weekLabel: string;
   storeName: string;
   importedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  replacedAt?: string;
+  importHash?: string;
+  previousImportHash?: string;
 
   // Backward compatibility with earlier single-file imports
   fileName?: string;

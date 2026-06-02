@@ -36,6 +36,8 @@ export async function buildStoredWeekFromCsvText(
     storeName: parsed.detectedStore,
     fileName,
     importedAt,
+    createdAt: importedAt,
+    importHash: parsed.contentHash,
     sourceFiles: [
       {
         fileName,

@@ -1,6 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 docs/*
 !docs/dev-process.md
+!docs/engineering-handoff.md
+!docs/sprint-5-mini-specs.md
+!docs/sprint-6-mini-specs.md
 
 AGENTS.md
 CLAUDE.md
@@ -17,6 +20,8 @@ CLAUDE.md
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/

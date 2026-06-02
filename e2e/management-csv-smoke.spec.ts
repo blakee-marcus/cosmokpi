@@ -1,0 +1,58 @@
+import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const fakeManagementCsv = join(
+  process.cwd(),
+  'test/fixtures/csv/fake-management-week-2026-05-11.csv',
+);
+const fakeManagementFileName = 'fake-management-week-2026-05-11.csv';
+const fakeManagementCsvText = readFileSync(fakeManagementCsv, 'utf8');
+
+test('imports fake management CSV and exercises dashboard review paths', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => window.localStorage.clear());
+  await expect(page.getByText('Waiting for CSV')).toBeVisible();
+
+  const dataTransfer = await page.evaluateHandle(
+    ({ csvText, fileName }) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([csvText], fileName, { type: 'text/csv' }));
+      return transfer;
+    },
+    { csvText: fakeManagementCsvText, fileName: fakeManagementFileName },
+  );
+
+  await page
+    .locator('label[aria-label="Upload cOSmo CSV file"]')
+    .dispatchEvent('drop', { dataTransfer });
+
+  await expect(page.getByText('Report saved successfully')).toBeVisible();
+  await expect(page.getByText(fakeManagementFileName)).toBeVisible();
+  await expect(page.getByText('Report type: Game Guide')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Open dashboard' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Recap the week' })).toBeVisible();
+  await expect(page.getByText('Training Store North weekly KPI review')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Team member KPI table' })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Alex Arcade/ })).toBeVisible();
+
+  await page.locator('#sort-select').selectOption('previewsPercent');
+  await page.locator('#employee-search').fill('Blair');
+  await expect(page.getByRole('row', { name: /Blair Beacon/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Alex Arcade/ })).toHaveCount(0);
+
+  await page.getByRole('button', { name: /Monthly/ }).click();
+  await expect(page.getByRole('heading', { name: 'Spot the trend' })).toBeVisible();
+  await expect(page.getByText('Viewing June 2026 across 1 saved report.')).toBeVisible();
+  await expect(page.getByRole('row', { name: /Alex Arcade/ })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export weekly recap' }).click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toMatch(
+    /^flnl-kpi-training-store-north-\d{4}-\d{2}-\d{2}\.png$/,
+  );
+});

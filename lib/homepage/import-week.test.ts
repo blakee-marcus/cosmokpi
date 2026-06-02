@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { buildStoredWeekFromCsvText } from './import-week';
 
@@ -34,6 +36,10 @@ const GES_HEADERS = [
 
 function toCsv(headers: string[], rows: Array<Array<string | number>>) {
   return [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+}
+
+function readFixture(name: string) {
+  return readFileSync(join(process.cwd(), 'test/fixtures/csv', name), 'utf8');
 }
 
 describe('buildStoredWeekFromCsvText', () => {
@@ -158,5 +164,47 @@ describe('buildStoredWeekFromCsvText', () => {
     await expect(
       buildStoredWeekFromCsvText(invalidCsv, 'invalid.csv', '2026-04-06'),
     ).rejects.toThrow('Missing required columns');
+  });
+
+  it('creates a StoredWeek from the fake management export CSV shape', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-12T10:11:12.000Z'));
+
+    const result = await buildStoredWeekFromCsvText(
+      readFixture('fake-management-week-2026-05-11.csv'),
+      'fake-management-week-2026-05-11.csv',
+      '2026-05-11',
+    );
+
+    expect(result.reportTypeLabel).toBe('Game Guide');
+    expect(result.week).toMatchObject({
+      id: 'Training Store North-2026-05-11',
+      weekStart: '2026-05-11',
+      weekLabel: 'May 11 - May 17, 2026',
+      storeName: 'Training Store North',
+      fileName: 'fake-management-week-2026-05-11.csv',
+      importedAt: '2026-05-12T10:11:12.000Z',
+      totals: {
+        employees: 4,
+        totalGames: 36,
+        guests: 84,
+        replaysSold: 17,
+        reviewsAsked: 35,
+        sharedReplay: 33,
+        afterGamePreviews: 33,
+      },
+    });
+    expect(result.week.sourceFiles?.[0]).toMatchObject({
+      fileName: 'fake-management-week-2026-05-11.csv',
+      type: 'game-guide',
+      reportType: 'game-guide',
+      detectedStore: 'Training Store North',
+      rowCount: 4,
+    });
+    expect(result.week.employees.find((employee) => employee.name === 'Morgan Mentor')).toMatchObject({
+      role: 'Assistant Manager',
+      totalGames: 5,
+      previewsPercent: 100,
+    });
   });
 });

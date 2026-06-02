@@ -2,6 +2,7 @@
 
 import { EMPTY_STORAGE, STORAGE_KEY } from './constants';
 import type { KpiStorage } from './types';
+import { migrateKpiStorage } from '@/lib/homepage/storage-migration';
 
 const KPI_STORAGE_CHANGED_EVENT = 'cosmo-kpi-storage-changed';
 
@@ -13,14 +14,20 @@ function getStorage(): KpiStorage {
     return EMPTY_STORAGE;
   }
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  let stored: string | null;
+
+  try {
+    stored = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return EMPTY_STORAGE;
+  }
 
   if (!stored) {
     return EMPTY_STORAGE;
   }
 
   try {
-    return JSON.parse(stored) as KpiStorage;
+    return migrateKpiStorage(JSON.parse(stored)) as KpiStorage;
   } catch {
     return EMPTY_STORAGE;
   }
