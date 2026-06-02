@@ -48,7 +48,7 @@ export function mergeEmployeeRecords(
     // Sum numeric values
     const merged_record: EmployeeKpiRowWithSources = {
       ...existing,
-      name: record.name, // Prefer current name
+      name: existing.name,
       storeName: record.storeName || existing.storeName,
       totalGames: (existing.totalGames || 0) + (record.totalGames || 0),
       guests: (existing.guests || 0) + (record.guests || 0),
@@ -57,9 +57,6 @@ export function mergeEmployeeRecords(
       sharedReplay: (existing.sharedReplay || 0) + (record.sharedReplay || 0),
       sources: [...existingSources, newSource],
     };
-
-    // Recalculate percentages from merged counts
-    recalculatePercentages(merged_record);
 
     // Handle optional GG columns
     if (record.SUEs !== undefined) {
@@ -86,6 +83,9 @@ export function mergeEmployeeRecords(
     const roles = existingSources.map((s) => s.originalRole as string);
     roles.push(record.role);
     merged_record.role = getDisplayRole(roles);
+
+    // Recalculate percentages after all count fields are merged.
+    recalculatePercentages(merged_record);
 
     merged.set(nameKey, merged_record);
   }

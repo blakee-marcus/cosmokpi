@@ -20,6 +20,25 @@ export type ParsedCsvResult = {
   error?: string;
 };
 
+const PERCENTAGE_COLUMNS = new Set([
+  'replaysSoldPercent',
+  'reviewsAskedPercent',
+  'sharedReplayPercent',
+  'suePercent',
+  'previewsPercent',
+  'postGamePreviewPercent',
+]);
+
+function parseNumericCsvValue(header: string, rawValue: string) {
+  const value = Number(rawValue || 0);
+
+  if (PERCENTAGE_COLUMNS.has(header) && value >= 0 && value <= 1) {
+    return value * 100;
+  }
+
+  return value;
+}
+
 /**
  * Parse CSV file content and detect report type
  * Supports flexible columns based on Game Guide vs GES format
@@ -62,7 +81,9 @@ export async function parseFltmCsv(fileContent: string): Promise<ParsedCsvResult
     const rows = rawRows.slice(1).map((row) => {
       const record = headers.reduce<Record<string, string | number>>((acc, header, index) => {
         const rawValue = row[index] ?? '';
-        acc[header] = numericColumns.has(header) ? Number(rawValue || 0) : rawValue;
+        acc[header] = numericColumns.has(header)
+          ? parseNumericCsvValue(header, rawValue)
+          : rawValue;
         return acc;
       }, {});
 

@@ -307,11 +307,17 @@ export function getTopEmployee(
 
     const currentValue = normalizePercent(Number(employee[metric]));
     const topValue = topEmployee ? normalizePercent(Number(topEmployee[metric])) : -Infinity;
+    const currentName = String(employee.name);
+    const topName = topEmployee ? String(topEmployee.name) : '';
 
     if (
       !topEmployee ||
       currentValue > topValue ||
-      (currentValue === topValue && Number(employee.totalGames) > Number(topEmployee.totalGames))
+      (currentValue === topValue &&
+        Number(employee[minimumCount]) > Number(topEmployee[minimumCount])) ||
+      (currentValue === topValue &&
+        Number(employee[minimumCount]) === Number(topEmployee[minimumCount]) &&
+        currentName.localeCompare(topName) < 0)
     ) {
       topEmployee = employee;
     }

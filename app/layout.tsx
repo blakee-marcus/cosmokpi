@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { Analytics } from '@vercel/analytics/next';
 
 import { MotionProvider } from '@/components/motion/MotionProvider';
 import { AppHeader } from '@/components/ui/AppHeader';
@@ -63,6 +64,7 @@ export default function RootLayout({
             </div>
           </div>
         </MotionProvider>
+        <Analytics />
       </body>
     </html>
   );

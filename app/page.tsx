@@ -4,6 +4,7 @@ import type { ChangeEvent, DragEvent } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { HeroSection } from '@/components/homepage/HeroSection';
 import { UploadPanel } from '@/components/homepage/UploadPanel';
+import { trackImpactEvent, trackUploadFailure } from '@/lib/analytics';
 import { waitForNextFrame } from '@/lib/homepage/browser';
 import { formatWeekLabel, getMondayDateString } from '@/lib/homepage/dates';
 import { buildStoredWeekFromCsvText, isCsvFile } from '@/lib/homepage/import-week';
@@ -27,6 +28,8 @@ const INITIAL_UPLOAD_STATE: UploadState = {
 const CSV_UPLOAD_ERROR = 'Please upload a CSV export from cOSmo.';
 const UNKNOWN_UPLOAD_ERROR = 'Something went wrong while preparing this report.';
 
+type UploadSource = 'file_picker' | 'drag_drop';
+
 export default function Home() {
   const [weekStart, setWeekStart] = useState(() => getMondayDateString());
   const [isDragging, setIsDragging] = useState(false);
@@ -43,10 +46,12 @@ export default function Home() {
   }, []);
 
   const handleFile = useCallback(
-    async (file: File | undefined) => {
+    async (file: File | undefined, source: UploadSource) => {
       if (!file || isProcessing) return;
 
       const selectedFileName = file.name;
+
+      trackImpactEvent('KPI Report Upload Started', { source });
 
       setUploadState({
         ...INITIAL_UPLOAD_STATE,
@@ -54,6 +59,10 @@ export default function Home() {
       });
 
       if (!isCsvFile(file)) {
+        trackImpactEvent('KPI Report Upload Rejected', {
+          reason: 'not_csv',
+          source,
+        });
         setUploadState({
           ...INITIAL_UPLOAD_STATE,
           selectedFileName,
@@ -75,6 +84,11 @@ export default function Home() {
 
         saveWeekToStorage(week);
 
+        trackImpactEvent('KPI Report Saved', {
+          report_type: reportTypeLabel,
+          source,
+        });
+
         setUploadState({
           selectedFileName,
           reportTypeLabel,
@@ -82,10 +96,15 @@ export default function Home() {
           savedWeek: week,
         });
       } catch (currentError) {
+        const errorMessage =
+          currentError instanceof Error ? currentError.message : UNKNOWN_UPLOAD_ERROR;
+
+        trackUploadFailure(errorMessage, source);
+
         setUploadState({
           ...INITIAL_UPLOAD_STATE,
           selectedFileName,
-          error: currentError instanceof Error ? currentError.message : UNKNOWN_UPLOAD_ERROR,
+          error: errorMessage,
         });
       } finally {
         setIsProcessing(false);
@@ -100,14 +119,14 @@ export default function Home() {
       event.stopPropagation();
 
       setIsDragging(false);
-      void handleFile(event.dataTransfer.files[0]);
+      void handleFile(event.dataTransfer.files[0], 'drag_drop');
     },
     [handleFile],
   );
 
   const handleFileInput = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
-      void handleFile(event.target.files?.[0]);
+      void handleFile(event.target.files?.[0], 'file_picker');
       event.target.value = '';
     },
     [handleFile],

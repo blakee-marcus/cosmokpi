@@ -94,7 +94,7 @@ function fillTextLeft(
   context.fillText(text, x, y, maxWidth);
 }
 
-function getExportStoreLabel(storeName: string) {
+export function getExportStoreLabel(storeName: string) {
   return storeName
     .replace(/^The Escape Game\s*/i, '')
     .replace(/\s*-\s*The Forum Shops/i, '')
@@ -201,7 +201,7 @@ function drawMetricValue(
   fillTextCentered(context, value, chipX + 20, chipY, chipWidth - 20, chipHeight);
 }
 
-function isManagementRole(role: string | number | undefined) {
+export function isManagementRole(role: string | number | undefined) {
   const normalizedRole = String(role ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
@@ -228,8 +228,23 @@ function isManagementRole(role: string | number | undefined) {
   );
 }
 
-function getFrontlineNewsletterRows(week: StoredWeek) {
+export function getFrontlineNewsletterRows(week: StoredWeek) {
   return getNewsletterRows(week).filter((employee) => !isManagementRole(employee.role));
+}
+
+export function prepareNewsletterExport(week: StoredWeek) {
+  const storeLabel = getExportStoreLabel(week.storeName || 'Store') || 'Store';
+  const storeSlug = slugify(storeLabel || 'store');
+
+  return {
+    columns: ['Team Member', '# Games', '# Guests', 'Replay', 'Review Ask', 'Preview'],
+    filename: `flnl-kpi-${storeSlug}-${week.weekStart}.png`,
+    rows: getFrontlineNewsletterRows(week),
+    storeLabel,
+    storeSlug,
+    weekLabel: week.weekLabel,
+    weekStart: week.weekStart,
+  };
 }
 
 function drawHeader(
@@ -406,7 +421,7 @@ function drawEmployeeRow(
 }
 
 function createNewsletterKpiCanvas(week: StoredWeek) {
-  const rows = getFrontlineNewsletterRows(week);
+  const { rows } = prepareNewsletterExport(week);
 
   const pagePadding = 46;
   const cardPadding = 30;
@@ -492,9 +507,9 @@ function createNewsletterKpiCanvas(week: StoredWeek) {
 export function exportWeekForNewsletter(week: StoredWeek) {
   const canvas = createNewsletterKpiCanvas(week);
   const link = document.createElement('a');
-  const storeSlug = slugify(getExportStoreLabel(week.storeName || 'store') || 'store');
+  const { filename } = prepareNewsletterExport(week);
 
-  link.download = `flnl-kpi-${storeSlug}-${week.weekStart}.png`;
+  link.download = filename;
   link.href = canvas.toDataURL('image/png');
 
   document.body.appendChild(link);

@@ -41,6 +41,7 @@ Primary outcomes:
 - Tailwind CSS 4
 - Browser `localStorage`
 - Browser `canvas` API for PNG export
+- Vercel Web Analytics for route-level page views and privacy-safe workflow events
 - npm with checked-in `package-lock.json`
 
 ## Architecture
@@ -51,10 +52,10 @@ Current architecture constraints:
 
 - No backend database.
 - No authentication layer.
-- No analytics pipeline.
+- Vercel Web Analytics is limited to page-level route visits and privacy-safe workflow events.
 - No server-side employee KPI reporting.
 - No external storage for uploaded CSV data.
-- No employee KPI values in URLs, logs, cookies, or deployment output.
+- No employee KPI values in URLs, logs, cookies, analytics events, or deployment output.
 
 Any change to those constraints should be reviewed as a product and architecture decision before implementation.
 
@@ -64,10 +65,29 @@ Employee KPI data stays on the device.
 
 - CSV files are parsed in the browser.
 - Weekly report data is saved under `employee-kpi-dashboard:v1` in `localStorage`.
-- Uploaded reports are excluded from GitHub Actions, Vercel, analytics, cookies, URLs, logs, and external services.
+- Uploaded reports are excluded from GitHub Actions, Vercel storage, custom analytics events, cookies, URLs, logs, and external services.
+- Vercel Web Analytics may record route visits such as `/` and `/dashboard` plus privacy-safe workflow events, but must not receive uploaded CSV contents, employee names, KPI values, search terms, week IDs, `localStorage` data, or export contents.
 - CI validates source code only.
 
-Keep this model intact unless the product direction intentionally changes. Any cloud persistence, analytics, authentication, or server-side reporting should be treated as a major scope change.
+Keep this model intact unless the product direction intentionally changes. Any cloud persistence, KPI-specific analytics, authentication, or server-side reporting should be treated as a major scope change.
+
+## Impact Analytics
+
+Analytics are intended to help demonstrate leadership workflow impact without exposing employee KPI data.
+
+Tracked events:
+
+- `KPI Report Upload Started`
+- `KPI Report Upload Rejected`
+- `KPI Report Upload Failed`
+- `KPI Report Saved`
+- `Dashboard View Mode Changed`
+- `Dashboard Period Changed`
+- `Dashboard Search Used`
+- `Dashboard Sort Changed`
+- `FLNL Export Downloaded`
+
+These events can support a promotion or raise conversation by showing dashboard adoption, successful report processing, manager review behavior, and newsletter export usage. Event properties are limited to safe workflow metadata such as upload source, report type, failure category, dashboard view mode, sort key, and export format.
 
 ## Project Structure
 
@@ -108,13 +128,14 @@ http://localhost:3000/dashboard
 ## Quality Commands
 
 ```bash
+npm run test
 npm run lint
 npm run typecheck
 npm run build
 npm run check
 ```
 
-`npm run check` runs linting, TypeScript validation, and the production Next.js build in the same order used by CI.
+`npm run test` runs focused Vitest unit tests for business logic. `npm run check` runs linting, TypeScript validation, and the production Next.js build in the same order used by CI.
 
 ## Data Contract
 
@@ -302,7 +323,7 @@ Avoid adding:
 - Payroll logic
 - Cloud sync
 - Authentication
-- Analytics
+- KPI-specific analytics events
 - Long-term employee recordkeeping
 - Features that make the tool feel punitive instead of coaching-oriented
 

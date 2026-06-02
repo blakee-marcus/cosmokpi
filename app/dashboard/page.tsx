@@ -11,9 +11,9 @@ import { EmptyDashboardState } from '@/components/dashboard/EmptyDashboardState'
 import { KpiMetricGrid } from '@/components/dashboard/KpiMetricGrid';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { WeekProgressSection } from '@/components/dashboard/WeekProgressSection';
+import { trackImpactEvent } from '@/lib/analytics';
 import { getEmployeeComparisonKey } from '@/lib/dashboard/comparison';
-import { EMPTY_STORAGE, MINIMUM_GAMES_FOR_RANKING } from '@/lib/dashboard/constants';
-import { normalizePercent } from '@/lib/dashboard/formatters';
+import { EMPTY_STORAGE } from '@/lib/dashboard/constants';
 import {
   buildDashboardMetrics,
   buildWeekProgressMetrics,
@@ -29,6 +29,7 @@ import {
 } from '@/lib/dashboard/monthly';
 import { exportWeekForNewsletter } from '@/lib/dashboard/newsletter-export';
 import { getStorageSnapshot, subscribeToStorage } from '@/lib/dashboard/storage';
+import { DEFAULT_SORT_KEY, filterEmployees, rankEmployees } from '@/lib/dashboard/table';
 import type {
   DashboardPeriod,
   DashboardPeriodOption,
@@ -39,8 +40,6 @@ import type {
   StoredWeek,
 } from '@/lib/dashboard/types';
 import { fadeUp } from '@/lib/motion';
-
-const DEFAULT_SORT_KEY: SortKey = 'replaysSoldPercent';
 
 function getSelectedWeek(
   weeks: StoredWeek[],
@@ -60,39 +59,6 @@ function buildPreviousEmployeeMap(previousPeriod: DashboardPeriod | null) {
   });
 
   return employeesByKey;
-}
-
-function getSortValue(employee: EmployeeKpiRow, sortKey: SortKey) {
-  const value = Number(employee[sortKey]);
-
-  return sortKey.endsWith('Percent') ? normalizePercent(value) : value;
-}
-
-function rankEmployees(employees: EmployeeKpiRow[], sortKey: SortKey) {
-  return [...employees]
-    .filter((employee) => Number(employee.totalGames) >= MINIMUM_GAMES_FOR_RANKING)
-    .sort((a, b) => {
-      if (sortKey === 'name') {
-        return String(a.name).localeCompare(String(b.name));
-      }
-
-      return getSortValue(b, sortKey) - getSortValue(a, sortKey);
-    });
-}
-
-function filterEmployees(employees: EmployeeKpiRow[], searchTerm: string) {
-  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
-
-  if (!normalizedSearchTerm) {
-    return employees;
-  }
-
-  return employees.filter((employee) =>
-    [employee.name, employee.role, employee.storeName]
-      .join(' ')
-      .toLowerCase()
-      .includes(normalizedSearchTerm),
-  );
 }
 
 export default function DashboardPage() {
@@ -204,6 +170,10 @@ export default function DashboardPage() {
 
       setSelectedWeekId(nextSelectedWeek.id);
       resetTableControls();
+
+      trackImpactEvent('Dashboard Period Changed', {
+        view_mode: viewMode,
+      });
     },
     [resetTableControls, storage.weeks, viewMode],
   );
@@ -212,27 +182,63 @@ export default function DashboardPage() {
     (nextWeekId: string) => {
       setSelectedWeekId(nextWeekId);
       resetTableControls();
+
+      trackImpactEvent('Dashboard Period Changed', {
+        view_mode: viewMode,
+      });
     },
-    [resetTableControls],
+    [resetTableControls, viewMode],
   );
 
   const handleViewModeChange = useCallback(
     (nextViewMode: DashboardViewMode) => {
       setViewMode(nextViewMode);
       resetTableControls();
+
+      trackImpactEvent('Dashboard View Mode Changed', {
+        view_mode: nextViewMode,
+      });
     },
     [resetTableControls],
   );
 
-  const handleSearchTermChange = useCallback((nextSearchTerm: string) => {
-    setSearchTerm(nextSearchTerm);
-  }, []);
+  const handleSearchTermChange = useCallback(
+    (nextSearchTerm: string) => {
+      if (!searchTerm.trim() && nextSearchTerm.trim()) {
+        trackImpactEvent('Dashboard Search Used', {
+          view_mode: viewMode,
+        });
+      }
+
+      setSearchTerm(nextSearchTerm);
+    },
+    [searchTerm, viewMode],
+  );
+
+  const handleSortKeyChange = useCallback(
+    (nextSortKey: SortKey) => {
+      if (nextSortKey !== sortKey) {
+        trackImpactEvent('Dashboard Sort Changed', {
+          sort_key: nextSortKey,
+          view_mode: viewMode,
+        });
+      }
+
+      setSortKey(nextSortKey);
+    },
+    [sortKey, viewMode],
+  );
 
   const handleExportSelectedWeek = useCallback(() => {
     if (!selectedWeek) return;
 
     exportWeekForNewsletter(selectedWeek);
-  }, [selectedWeek]);
+
+    trackImpactEvent('FLNL Export Downloaded', {
+      export_format: 'png',
+      view_mode: viewMode,
+    });
+  }, [selectedWeek, viewMode]);
 
   if (!selectedWeek || !selectedPeriod || !selectedPeriodOption) {
     return <EmptyDashboardState />;
@@ -288,7 +294,7 @@ export default function DashboardPage() {
               searchTerm={searchTerm}
               sortKey={sortKey}
               onSearchTermChange={handleSearchTermChange}
-              onSortKeyChange={setSortKey}
+              onSortKeyChange={handleSortKeyChange}
             />
           </m.div>
         </AnimatePresence>
