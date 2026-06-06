@@ -13,6 +13,7 @@ import {
   CsvImportError,
   getFileTypeValidationError,
   isCsvFile,
+  type ImportPreview,
   type ImportWarning,
 } from '@/lib/homepage/import-week';
 import { findStoredWeekForImport, saveWeekToStorage } from '@/lib/homepage/storage';
@@ -24,6 +25,7 @@ type PendingImport = Readonly<{
   selectedFileName: string;
   reportTypeLabel: string;
   source: UploadSource;
+  preview: ImportPreview;
   week: StoredWeek;
   existingWeek: StoredWeek | null;
   warnings: ImportWarning[];
@@ -104,7 +106,7 @@ export default function Home() {
         await waitForNextFrame();
 
         const csvText = await file.text();
-        const { week, reportTypeLabel, warnings } = await buildStoredWeekFromCsvText(
+        const { week, reportTypeLabel, preview, warnings } = await buildStoredWeekFromCsvText(
           csvText,
           selectedFileName,
           weekStart,
@@ -124,6 +126,7 @@ export default function Home() {
             selectedFileName,
             reportTypeLabel,
             source,
+            preview,
             week,
             existingWeek,
             warnings,
@@ -152,7 +155,9 @@ export default function Home() {
 
     if (!pendingImport) return;
 
-    const savedStorage = saveWeekToStorage(pendingImport.week);
+    const savedStorage = saveWeekToStorage(pendingImport.week, {
+      allowOverwrite: Boolean(pendingImport.existingWeek),
+    });
     const savedWeek =
       savedStorage.weeks.find((week) => week.id === pendingImport.week.id) ?? pendingImport.week;
 

@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildStoredWeekFromCsvText } from './import-week';
 import { EMPTY_STORAGE, STORAGE_KEY } from './constants';
-import { getKpiStorage, hasImportedFile, saveWeekToStorage } from './storage';
+import {
+  createEmptyImportSession,
+  findStoredWeekForImport,
+  getKpiStorage,
+  hasImportedFile,
+  saveWeekToStorage,
+} from './storage';
 import type { KpiStorage, StoredWeek } from './types';
 import {
   getStorageSnapshot,
@@ -178,18 +184,58 @@ describe('homepage KPI storage', () => {
     expect(hasImportedFile(otherWeek.id, 'hash-one')).toBe(false);
   });
 
-  it('replaces the same week/store id with different content and does not mutate storage after failed import parsing', async () => {
+  it('requires explicit overwrite confirmation before replacing the same store/week', () => {
     const originalWeek = makeWeek();
     const replacementWeek = makeWeek({
       sourceFiles: [{ ...originalWeek.sourceFiles![0], contentHash: 'hash-two' }],
     });
 
     saveWeekToStorage(originalWeek);
-    saveWeekToStorage(replacementWeek);
+
+    expect(findStoredWeekForImport(replacementWeek)).toMatchObject({
+      id: originalWeek.id,
+      sourceFiles: [expect.objectContaining({ contentHash: 'hash-one' })],
+    });
+    expect(() => saveWeekToStorage(replacementWeek)).toThrow(
+      'Data already exists for this week. Confirming will replace the saved report for this week.',
+    );
+
+    saveWeekToStorage(replacementWeek, { allowOverwrite: true });
 
     expect(hasImportedFile(originalWeek.id, 'hash-one')).toBe(false);
     expect(hasImportedFile(originalWeek.id, 'hash-two')).toBe(true);
     expect(getKpiStorage().weeks).toHaveLength(1);
+  });
+
+  it('canceling a pending preview leaves saved data unchanged', () => {
+    const originalWeek = makeWeek();
+    const replacementWeek = makeWeek({
+      sourceFiles: [{ ...originalWeek.sourceFiles![0], contentHash: 'hash-two' }],
+    });
+
+    saveWeekToStorage(originalWeek);
+    const rawBeforeCancel = window.localStorage.getItem(STORAGE_KEY);
+    const session = createEmptyImportSession({
+      selectedFileName: replacementWeek.fileName,
+      pendingImport: {
+        selectedFileName: replacementWeek.fileName,
+        reportTypeLabel: 'Game Guide',
+        week: replacementWeek,
+        existingWeek: originalWeek,
+        warnings: [],
+      },
+    });
+
+    const canceled = session.cancel();
+
+    expect(canceled.pendingImport).toBeNull();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(rawBeforeCancel);
+  });
+
+  it('does not mutate storage after failed import parsing', async () => {
+    const originalWeek = makeWeek();
+
+    saveWeekToStorage(originalWeek);
 
     const rawBeforeFailedImport = window.localStorage.getItem(STORAGE_KEY);
     const invalidCsv = toCsv(
@@ -199,7 +245,7 @@ describe('homepage KPI storage', () => {
 
     await expect(
       buildStoredWeekFromCsvText(invalidCsv, 'invalid.csv', '2026-02-02'),
-    ).rejects.toThrow('Missing required columns');
+    ).rejects.toMatchObject({ validationError: { code: 'missing_required_columns' } });
 
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe(rawBeforeFailedImport);
   });

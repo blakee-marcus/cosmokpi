@@ -101,7 +101,7 @@ describe('CSV detection and parsing', () => {
 
     const result = await parseFltmCsv(csv);
 
-    expect(result.error).toContain('Missing required columns');
+    expect(result.error).toBe('Required columns are missing. Check that this is the weekly Game Guide CSV.');
     expect(result.rows).toEqual([]);
     expect(result.reportType).toBe('unknown');
   });

@@ -12,7 +12,7 @@ Analytics is limited to safe workflow metadata such as upload source, report typ
 
 ## Data Flow
 
-CSV import -> parse and detect report type -> merge duplicate employee rows -> save to `localStorage` -> dashboard reads saved weeks -> weekly or monthly aggregation -> user-initiated PNG export.
+CSV import -> parse and detect report type -> merge duplicate employee rows -> preview import -> explicit confirm -> save to `localStorage` -> dashboard reads saved weeks -> weekly or monthly aggregation -> user-initiated PNG export.
 
 ## Business Rules
 
@@ -38,7 +38,7 @@ Duplicate employee merge behavior: employees merge by normalized name for import
 
 Import-to-storage behavior: `buildStoredWeekFromCsvText` creates one `StoredWeek` for the selected week start and detected store. Source file metadata includes file name, report type, detected store, content hash, import timestamp, and row count. Invalid CSV parsing throws before a storage save should be attempted.
 
-Same-week import product decision: `hasImportedFile` checks content hash only within the matching stored week id. Saving the same week/store with the same content hash is a duplicate no-op and must not rewrite localStorage. Saving the same week/store with different content replaces the stored week deterministically. Replacement preserves the existing week identity, week start, week label, and original `createdAt`, writes the incoming employees/totals/source files without merging rows, and records replacement metadata such as `updatedAt`, `replacedAt`, and `previousImportHash`. There is no multi-file merge behavior and no confirmation UI in Sprint 6.
+Same-week import product decision: `hasImportedFile` checks content hash only within the matching stored week id. Saving the same week/store with the same content hash is a duplicate no-op and must not rewrite localStorage. Saving the same week/store with different content replaces the stored week deterministically only after the user confirms the import preview. Replacement preserves the existing week identity, week start, week label, and original `createdAt`, writes the incoming employees/totals/source files without merging rows, and records replacement metadata such as `updatedAt`, `replacedAt`, and `previousImportHash`. There is no multi-file merge behavior.
 
 Monthly aggregation behavior: saved weeks group by normalized store name and `YYYY-MM`; employee rows merge across included weeks; dashboard totals are summed from weekly totals; source file metadata is carried forward for context.
 
@@ -300,3 +300,33 @@ Remaining risks:
 Recommended future maintenance trigger:
 
 - Open a follow-up maintenance sprint when npm audit offers a non-breaking Next/PostCSS remediation, when npm changes optional-dependency reporting behavior, when the remaining audit severity increases, or when verification hygiene around ignored artifact directories starts blocking repeatable local checks.
+
+## Sprint 10 Verification
+
+Sprint 10 hardens the weekly import flow with a required preview and explicit confirm step before localStorage writes.
+
+Changed behavior:
+
+- Uploading a CSV parses and validates the file, then shows a preview before saving.
+- Preview includes file name, chosen report week, saved week label, detected row count, team member count, duplicate employee rows merged, warning count, and duplicate-week status.
+- Same store/week replacement requires explicit confirmation. Unconfirmed replacement attempts throw the same user-facing overwrite message shown in the UI.
+- Canceling the preview clears the pending import without mutating saved localStorage.
+- Validation errors now use short recovery copy for wrong file type, empty CSV, missing required columns, invalid numbers, and no valid team member rows.
+- Success state shows the saved week, employee count, `Review dashboard`, and `Import another week`.
+
+Privacy review:
+
+- Imported KPI data remains local to the browser.
+- No auth, database, cloud sync, new services, or network persistence was added.
+- Analytics remain workflow-only and do not include employee names, KPI values, row data, file contents, localStorage payloads, or report contents.
+
+Verification commands:
+
+- `npm run test`
+- `npm run check`
+- `npm run test:browser`
+
+Known remaining risks:
+
+- Browser smoke covers the happy path with fake data and is not comprehensive visual regression coverage.
+- Node 26 still prints a `module.register()` deprecation warning in this shell; the repo runtime remains documented as Node 22.

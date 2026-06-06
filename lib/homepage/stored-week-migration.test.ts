@@ -291,7 +291,7 @@ describe('stored week migration contract', () => {
     } as Partial<StoredWeek>);
 
     saveWeekToStorage(originalWeek);
-    const saved = saveWeekToStorage(replacementWeek);
+    const saved = saveWeekToStorage(replacementWeek, { allowOverwrite: true });
 
     expect(saved.latestWeekId).toBe(originalWeek.id);
     expect(saved.weeks).toHaveLength(1);

@@ -50,10 +50,9 @@ const PERCENTAGE_COLUMNS = new Set([
 const VALIDATION_ERROR_COPY: Record<CsvValidationErrorCode, CsvValidationError> = {
   missing_required_columns: {
     code: 'missing_required_columns',
-    title: 'Missing required columns',
-    message:
-      'This file does not include the columns needed for the Game Guide KPI report.',
-    nextStep: 'Download the weekly Game Guide CSV from cOSmo FLTM Reports and try again.',
+    title: 'Required columns are missing',
+    message: 'Required columns are missing. Check that this is the weekly Game Guide CSV.',
+    nextStep: 'Export the weekly cOSmo FLTM Game Guide CSV again, then upload it here.',
   },
   unsupported_report_type: {
     code: 'unsupported_report_type',
@@ -64,21 +63,21 @@ const VALIDATION_ERROR_COPY: Record<CsvValidationErrorCode, CsvValidationError> 
   },
   no_team_members: {
     code: 'no_team_members',
-    title: 'No team member rows found',
-    message: 'This CSV has headers but does not include any team member KPI rows.',
-    nextStep: 'Check that the export includes employee rows, then upload the CSV again.',
+    title: 'No valid team member rows found',
+    message: 'No valid team member rows were found. Check the export and try again.',
+    nextStep: 'Make sure the CSV includes employee names and KPI rows before uploading.',
   },
   invalid_numeric_values: {
     code: 'invalid_numeric_values',
-    title: 'Invalid numeric values',
-    message: 'One or more KPI columns contains a value that is not a number.',
-    nextStep: 'Fix the numeric KPI cells in cOSmo or the CSV export, then upload it again.',
+    title: 'Invalid numbers found',
+    message: 'Some rows have invalid numbers. Fix the CSV values, then upload it again.',
+    nextStep: 'Review the KPI number columns in the CSV export before trying again.',
   },
   empty_csv: {
     code: 'empty_csv',
     title: 'Empty CSV',
-    message: 'This file is empty or does not include a readable CSV header row.',
-    nextStep: 'Export a fresh weekly CSV from cOSmo FLTM Reports and try again.',
+    message: 'This CSV is empty. Export the report again and upload the new file.',
+    nextStep: 'Export a fresh weekly cOSmo FLTM Game Guide CSV, then upload it here.',
   },
   could_not_detect_store: {
     code: 'could_not_detect_store',
@@ -89,7 +88,7 @@ const VALIDATION_ERROR_COPY: Record<CsvValidationErrorCode, CsvValidationError> 
   not_csv: {
     code: 'not_csv',
     title: 'File is not a CSV',
-    message: 'This upload does not look like a CSV export.',
+    message: 'This file is not a CSV. Upload the weekly cOSmo FLTM Game Guide CSV.',
     nextStep: 'Choose the .csv file downloaded from cOSmo FLTM Reports.',
   },
   unknown: {
@@ -100,24 +99,19 @@ const VALIDATION_ERROR_COPY: Record<CsvValidationErrorCode, CsvValidationError> 
   },
 };
 
-export function getCsvValidationError(
-  code: CsvValidationErrorCode,
-  detail?: string,
-): CsvValidationError {
+export function getCsvValidationError(code: CsvValidationErrorCode): CsvValidationError {
   const baseError = VALIDATION_ERROR_COPY[code];
 
   return {
     ...baseError,
-    message: detail ? `${baseError.message} ${detail}` : baseError.message,
   };
 }
 
 function buildErrorResult(
   code: CsvValidationErrorCode,
   contentHash: string,
-  detail?: string,
 ): ParsedCsvResult {
-  const validationError = getCsvValidationError(code, detail);
+  const validationError = getCsvValidationError(code);
 
   return {
     reportType: 'unknown',
@@ -177,7 +171,7 @@ export async function parseFltmCsv(fileContent: string): Promise<ParsedCsvResult
     const detection = detectReportType(headers);
 
     if (detection.error) {
-      return buildErrorResult('missing_required_columns', contentHash, detection.error);
+      return buildErrorResult('missing_required_columns', contentHash);
     }
 
     if (detection.type === 'unknown') {
@@ -201,12 +195,8 @@ export async function parseFltmCsv(fileContent: string): Promise<ParsedCsvResult
         }, {});
 
         rows.push(record as EmployeeKpiRowWithSources);
-      } catch (error) {
-        return buildErrorResult(
-          'invalid_numeric_values',
-          contentHash,
-          error instanceof Error ? error.message : undefined,
-        );
+      } catch {
+        return buildErrorResult('invalid_numeric_values', contentHash);
       }
     }
 
@@ -231,7 +221,7 @@ export async function parseFltmCsv(fileContent: string): Promise<ParsedCsvResult
       rows: teamRows,
       contentHash,
     };
-  } catch (error) {
+  } catch {
     const validationError = getCsvValidationError('unknown');
 
     return {

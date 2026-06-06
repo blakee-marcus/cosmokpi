@@ -71,12 +71,12 @@ describe('dashboard KPI metrics', () => {
       previewsPercent: 70,
     });
     expect(cards.map((card) => [card.label, card.value, card.goal])).toEqual([
-      ['Replay conversion', 20, 15],
+      ['Replay discount rate', 20, 15],
       ['Review ask rate', 90, 90],
       ['Shared replay rate', 80, 90],
       ['Preview ask rate', 70, 90],
     ]);
-    expect(cards[0].detail).toBe('10 replays sold from 50 guests served.');
+    expect(cards[0].detail).toBe('10 replay discounts used by 50 guests.');
   });
 
   it('uses zero-denominator safety for empty dashboard periods', () => {
@@ -152,7 +152,7 @@ describe('dashboard KPI metrics', () => {
     const summary = getProgressSummary(metrics);
 
     expect(metrics.map((metric) => [metric.label, metric.delta])).toEqual([
-      ['Replay conversion', 4],
+      ['Replay discount rate', 4],
       ['Review ask rate', -5],
       ['Shared replay rate', -5],
       ['Preview ask rate', -20],
@@ -162,7 +162,7 @@ describe('dashboard KPI metrics', () => {
       steadyCount: 0,
       needsFollowUpCount: 3,
     });
-    expect(summary.strongestGain?.label).toBe('Replay conversion');
+    expect(summary.strongestGain?.label).toBe('Replay discount rate');
     expect(summary.priorityFollowUp?.label).toBe('Preview ask rate');
   });
 

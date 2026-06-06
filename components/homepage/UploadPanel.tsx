@@ -2,7 +2,7 @@ import type { ChangeEvent, DragEvent, RefObject } from 'react';
 import * as m from 'motion/react-m';
 
 import type { CsvValidationError } from '@/lib/csv-parser';
-import type { ImportWarning } from '@/lib/homepage/import-week';
+import type { ImportPreview, ImportWarning } from '@/lib/homepage/import-week';
 import type { StoredWeek } from '@/lib/homepage/types';
 import { panelIn } from '@/lib/motion';
 import { FileDropzone } from './FileDropzone';
@@ -17,6 +17,7 @@ type UploadPanelProps = {
   pendingImport: {
     selectedFileName: string;
     reportTypeLabel: string;
+    preview: ImportPreview;
     week: StoredWeek;
     existingWeek: StoredWeek | null;
     warnings: ImportWarning[];

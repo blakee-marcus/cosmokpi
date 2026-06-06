@@ -4,7 +4,10 @@ import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 
 import type { CsvValidationError } from '@/lib/csv-parser';
-import type { ImportWarning } from '@/lib/homepage/import-week';
+import {
+  OVERWRITE_CONFIRMATION_MESSAGE,
+} from '@/lib/homepage/storage';
+import type { ImportPreview, ImportWarning } from '@/lib/homepage/import-week';
 import type { StoredWeek } from '@/lib/homepage/types';
 import { fadeUp, listContainer, listItem } from '@/lib/motion';
 
@@ -14,6 +17,7 @@ type UploadStatusProps = {
   pendingImport: {
     selectedFileName: string;
     reportTypeLabel: string;
+    preview: ImportPreview;
     week: StoredWeek;
     existingWeek: StoredWeek | null;
     warnings: ImportWarning[];
@@ -92,6 +96,15 @@ function SavedStat({ label, value }: { label: string; value: number }) {
   );
 }
 
+function PreviewDetail({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className='rounded-[18px] bg-comic-fog p-3'>
+      <p className='text-xs font-black uppercase tracking-wide text-ink-soft'>{label}</p>
+      <p className='mt-1 break-words text-sm font-black text-cosmo-black'>{value}</p>
+    </div>
+  );
+}
+
 export function UploadStatus({
   error,
   isProcessing,
@@ -145,11 +158,12 @@ export function UploadStatus({
     );
   } else if (pendingImport) {
     const isReplacement = Boolean(pendingImport.existingWeek);
+    const preview = pendingImport.preview;
     const stats = [
-      { label: 'Team', value: pendingImport.week.totals.employees },
-      { label: 'Rows', value: pendingImport.week.sourceFiles?.[0]?.rowCount ?? 0 },
-      { label: 'Games', value: pendingImport.week.totals.totalGames },
-      { label: 'Guests', value: pendingImport.week.totals.guests },
+      { label: 'Rows detected', value: preview.detectedRowCount },
+      { label: 'Team members', value: preview.teamMemberCount },
+      { label: 'Duplicate rows merged', value: preview.duplicateEmployeeRows },
+      { label: 'Warnings', value: preview.validationWarnings.length },
     ];
 
     content = (
@@ -167,22 +181,10 @@ export function UploadStatus({
           />
 
           <div className='grid gap-3 text-sm font-semibold text-ink-soft sm:grid-cols-2'>
-            <div className='rounded-[18px] bg-comic-fog p-3'>
-              <p className='text-xs font-black uppercase tracking-wide'>File</p>
-              <p className='mt-1 break-words text-cosmo-black'>{pendingImport.selectedFileName}</p>
-            </div>
-            <div className='rounded-[18px] bg-comic-fog p-3'>
-              <p className='text-xs font-black uppercase tracking-wide'>Saved week</p>
-              <p className='mt-1 text-cosmo-black'>{pendingImport.week.weekLabel}</p>
-            </div>
-            <div className='rounded-[18px] bg-comic-fog p-3'>
-              <p className='text-xs font-black uppercase tracking-wide'>Store</p>
-              <p className='mt-1 text-cosmo-black'>{pendingImport.week.storeName}</p>
-            </div>
-            <div className='rounded-[18px] bg-comic-fog p-3'>
-              <p className='text-xs font-black uppercase tracking-wide'>Report type</p>
-              <p className='mt-1 text-cosmo-black'>{pendingImport.reportTypeLabel}</p>
-            </div>
+            <PreviewDetail label='File name' value={preview.fileName} />
+            <PreviewDetail label='Report week chosen' value={preview.selectedWeekLabel} />
+            <PreviewDetail label='Saved week label' value={preview.savedWeekLabel} />
+            <PreviewDetail label='Report type' value={pendingImport.reportTypeLabel} />
           </div>
 
           <m.div variants={listContainer} className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
@@ -197,6 +199,9 @@ export function UploadStatus({
             <div className='rounded-[18px] border-2 border-primary-web-red/20 bg-primary-web-red/5 p-4'>
               <p className='font-heading text-base font-black text-cosmo-black'>
                 Existing local report
+              </p>
+              <p className='mt-2 text-sm font-semibold leading-6 text-ink-soft'>
+                {OVERWRITE_CONFIRMATION_MESSAGE}
               </p>
               <p className='mt-2 text-sm font-semibold leading-6 text-ink-soft'>
                 {pendingImport.existingWeek.fileName} was imported{' '}
@@ -234,7 +239,7 @@ export function UploadStatus({
     );
   } else if (savedWeek) {
     const stats = [
-      { label: 'Team', value: savedWeek.totals.employees },
+      { label: 'Employees', value: savedWeek.totals.employees },
       { label: 'Games', value: savedWeek.totals.totalGames },
       { label: 'Guests', value: savedWeek.totals.guests },
       { label: 'Replays', value: savedWeek.totals.replaysSold },
@@ -286,13 +291,13 @@ export function UploadStatus({
             <Link
               href='/dashboard'
               className='mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-cosmo-white px-5 text-sm font-black text-primary-web-red transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cosmo-white/40 sm:w-fit'>
-              Open dashboard
+              Review dashboard
             </Link>
             <button
               type='button'
               onClick={onUploadAnotherWeek}
               className='mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-full border-2 border-cosmo-white/45 px-5 text-sm font-black text-cosmo-white transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cosmo-white/40 sm:ml-3 sm:mt-4 sm:w-fit'>
-              Upload another week
+              Import another week
             </button>
           </div>
         </div>
@@ -307,8 +312,8 @@ export function UploadStatus({
           title={selectedFileName ? 'Ready to process' : 'Ready for upload'}
           description={
             selectedFileName
-              ? `${selectedFileName} is selected. Once processing finishes, the report will save locally and the dashboard will be ready.`
-              : 'Upload the weekly cOSmo CSV to begin. Reports are saved locally only after validation passes.'
+              ? `${selectedFileName} is selected. Once processing finishes, review the preview before saving.`
+              : 'Upload the weekly cOSmo CSV to begin. Reports are saved locally only after you confirm the preview.'
           }
         />
       </StatusShell>

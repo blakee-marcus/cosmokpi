@@ -15,6 +15,16 @@ export type ImportWarning = {
   nextStep: string;
 };
 
+export type ImportPreview = {
+  fileName: string;
+  selectedWeekLabel: string;
+  savedWeekLabel: string;
+  detectedRowCount: number;
+  teamMemberCount: number;
+  duplicateEmployeeRows: number;
+  validationWarnings: ImportWarning[];
+};
+
 export class CsvImportError extends Error {
   validationError: CsvValidationError;
 
@@ -89,6 +99,7 @@ export async function buildStoredWeekFromCsvText(
 ): Promise<{
   week: StoredWeek;
   reportTypeLabel: string;
+  preview: ImportPreview;
   warnings: ImportWarning[];
 }> {
   const parsed = await parseFltmCsv(csvText);
@@ -108,6 +119,15 @@ export async function buildStoredWeekFromCsvText(
   const weekLabel = formatWeekLabel(weekStart);
   const reportTypeLabel = getReportTypeLabel(parsed.reportType);
   const warnings = buildImportWarnings(fileName, weekStart);
+  const preview: ImportPreview = {
+    fileName,
+    selectedWeekLabel: weekLabel,
+    savedWeekLabel: weekLabel,
+    detectedRowCount: parsed.rows.length,
+    teamMemberCount: employees.length,
+    duplicateEmployeeRows: Math.max(parsed.rows.length - employees.length, 0),
+    validationWarnings: warnings,
+  };
 
   const week: StoredWeek = {
     id: `${parsed.detectedStore}-${weekStart}`,
@@ -137,6 +157,7 @@ export async function buildStoredWeekFromCsvText(
   return {
     week,
     reportTypeLabel,
+    preview,
     warnings,
   };
 }

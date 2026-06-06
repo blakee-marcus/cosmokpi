@@ -191,7 +191,7 @@ function SearchField({
   const hasSearchTerm = searchTerm.trim().length > 0;
 
   const clearSearch = useCallback(() => {
-    onSearchTermChange();
+    onSearchTermChange('');
     inputRef.current?.focus();
   }, [onSearchTermChange]);
 
@@ -250,12 +250,15 @@ function SortDropdown({
   const listboxId = useId();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(() =>
-    Math.max(
-      SORT_OPTIONS.findIndex((option) => option.value === sortKey),
-      0,
-    ),
+  const selectedIndex = useMemo(
+    () =>
+      Math.max(
+        SORT_OPTIONS.findIndex((option) => option.value === sortKey),
+        0,
+      ),
+    [sortKey],
   );
+  const [activeIndex, setActiveIndex] = useState(() => selectedIndex);
 
   const selectedOption = useMemo(
     () => SORT_OPTIONS.find((option) => option.value === sortKey) ?? SORT_OPTIONS[0],
@@ -276,6 +279,7 @@ function SortDropdown({
         event.preventDefault();
 
         if (!isOpen) {
+          setActiveIndex(selectedIndex);
           setIsOpen(true);
           return;
         }
@@ -287,6 +291,7 @@ function SortDropdown({
         event.preventDefault();
 
         if (!isOpen) {
+          setActiveIndex(selectedIndex);
           setIsOpen(true);
           return;
         }
@@ -300,6 +305,7 @@ function SortDropdown({
         event.preventDefault();
 
         if (!isOpen) {
+          setActiveIndex(selectedIndex);
           setIsOpen(true);
           return;
         }
@@ -312,13 +318,8 @@ function SortDropdown({
         setIsOpen(false);
       }
     },
-    [activeIndex, isOpen, selectOption],
+    [activeIndex, isOpen, selectOption, selectedIndex],
   );
-
-  useEffect(() => {
-    const selectedIndex = SORT_OPTIONS.findIndex((option) => option.value === sortKey);
-    setActiveIndex(Math.max(selectedIndex, 0));
-  }, [sortKey]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -344,7 +345,10 @@ function SortDropdown({
         aria-haspopup='listbox'
         aria-expanded={isOpen}
         aria-controls={`${listboxId}-options`}
-        onClick={() => setIsOpen((currentValue) => !currentValue)}
+        onClick={() => {
+          setActiveIndex(selectedIndex);
+          setIsOpen((currentValue) => !currentValue);
+        }}
         onKeyDown={handleKeyDown}
         className='group flex h-12 w-full items-center justify-between gap-3 rounded-[18px] border-2 border-cosmo-black bg-cosmo-white px-4 text-left shadow-[4px_5px_0_0_rgba(17,17,17,1)] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-web-red/30 active:translate-y-0.5 active:shadow-[2px_3px_0_0_rgba(17,17,17,1)]'>
         <span className='min-w-0'>

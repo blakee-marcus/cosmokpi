@@ -3,6 +3,34 @@
 import { EMPTY_STORAGE, STORAGE_KEY } from './constants';
 import type { KpiStorage, StoredWeek } from './types';
 import { migrateKpiStorage, resolveWeekForStorage } from './storage-migration';
+import type { ImportWarning } from './import-week';
+
+export const OVERWRITE_CONFIRMATION_MESSAGE =
+  'Data already exists for this week. Confirming will replace the saved report for this week.';
+
+type PendingImportSnapshot = {
+  selectedFileName: string;
+  reportTypeLabel: string;
+  week: StoredWeek;
+  existingWeek: StoredWeek | null;
+  warnings: ImportWarning[];
+};
+
+type ImportSessionSnapshot = {
+  selectedFileName: string | null;
+  pendingImport: PendingImportSnapshot | null;
+};
+
+export function createEmptyImportSession(snapshot: ImportSessionSnapshot) {
+  return {
+    cancel(): ImportSessionSnapshot {
+      return {
+        selectedFileName: snapshot.pendingImport?.selectedFileName ?? snapshot.selectedFileName,
+        pendingImport: null,
+      };
+    },
+  };
+}
 
 function isSameStoreWeek(storedWeek: StoredWeek, week: StoredWeek) {
   return (
@@ -39,9 +67,24 @@ export function getKpiStorage(): KpiStorage {
   }
 }
 
-export function saveWeekToStorage(week: StoredWeek) {
+export function saveWeekToStorage(
+  week: StoredWeek,
+  options: { allowOverwrite?: boolean } = {},
+) {
   const currentStorage = getKpiStorage();
   const existingWeek = currentStorage.weeks.find((storedWeek) => isSameStoreWeek(storedWeek, week));
+
+  if (existingWeek && !options.allowOverwrite) {
+    const incomingHash = week.importHash ?? week.sourceFiles?.[0]?.contentHash;
+    const existingHashes = new Set(
+      existingWeek.sourceFiles?.map((sourceFile) => sourceFile.contentHash).filter(Boolean),
+    );
+
+    if (!incomingHash || !existingHashes.has(incomingHash)) {
+      throw new Error(OVERWRITE_CONFIRMATION_MESSAGE);
+    }
+  }
+
   const weekForStorage = resolveWeekForStorage(week, existingWeek);
 
   if (existingWeek === weekForStorage) {

@@ -28,26 +28,30 @@ test('imports fake management CSV and exercises dashboard review paths', async (
     .dispatchEvent('drop', { dataTransfer });
 
   await expect(page.getByText('Review import before saving')).toBeVisible();
+  await expect(page.getByText('Report week chosen', { exact: true })).toBeVisible();
+  await expect(page.getByText('Duplicate rows merged')).toBeVisible();
   await page.getByRole('button', { name: 'Save local report' }).click();
 
   await expect(page.getByText('Report saved successfully')).toBeVisible();
   await expect(page.getByText(fakeManagementFileName)).toBeVisible();
   await expect(page.getByText('Report type: Game Guide')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Review dashboard' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Open dashboard' }).click();
+  await page.getByRole('link', { name: 'Review dashboard' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Recap the week' })).toBeVisible();
-  await expect(page.getByText('Training Store North weekly KPI review')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Team member KPI table' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Weekly performance' })).toBeVisible();
+  await expect(page.getByText('Training Store North weekly dashboard')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Team performance table' })).toBeVisible();
   await expect(page.getByRole('row', { name: /Alex Arcade/ })).toBeVisible();
 
-  await page.locator('#sort-select').selectOption('previewsPercent');
-  await page.locator('#employee-search').fill('Blair');
+  await page.getByRole('button', { name: 'Sort team member table' }).click();
+  await page.getByRole('option', { name: 'Preview ask rate' }).click();
+  await page.getByRole('searchbox', { name: 'Search team members' }).fill('Blair');
   await expect(page.getByRole('row', { name: /Blair Beacon/ })).toBeVisible();
   await expect(page.getByRole('row', { name: /Alex Arcade/ })).toHaveCount(0);
 
   await page.getByRole('button', { name: /Monthly/ }).click();
-  await expect(page.getByRole('heading', { name: 'Spot the trend' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Monthly performance' })).toBeVisible();
   await expect(page.getByText('Viewing June 2026 across 1 saved report.')).toBeVisible();
   await expect(page.getByRole('row', { name: /Alex Arcade/ })).toBeVisible();
 

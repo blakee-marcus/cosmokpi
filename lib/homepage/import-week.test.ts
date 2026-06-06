@@ -64,6 +64,15 @@ describe('buildStoredWeekFromCsvText', () => {
     );
 
     expect(result.reportTypeLabel).toBe('Game Guide');
+    expect(result.preview).toEqual({
+      fileName: 'fake-game-guide.csv',
+      selectedWeekLabel: 'Feb 2 - Feb 8, 2026',
+      savedWeekLabel: 'Feb 2 - Feb 8, 2026',
+      detectedRowCount: 3,
+      teamMemberCount: 2,
+      duplicateEmployeeRows: 1,
+      validationWarnings: [],
+    });
     expect(result.week).toMatchObject({
       id: 'Training Store-2026-02-02',
       weekStart: '2026-02-02',
@@ -163,7 +172,45 @@ describe('buildStoredWeekFromCsvText', () => {
 
     await expect(
       buildStoredWeekFromCsvText(invalidCsv, 'invalid.csv', '2026-04-06'),
-    ).rejects.toThrow('Missing required columns');
+    ).rejects.toMatchObject({
+      validationError: {
+        title: 'Required columns are missing',
+        message: 'Required columns are missing. Check that this is the weekly Game Guide CSV.',
+        nextStep: 'Export the weekly cOSmo FLTM Game Guide CSV again, then upload it here.',
+      },
+    });
+  });
+
+  it('returns a recovery error for invalid numeric values', async () => {
+    const invalidCsv = toCsv(GAME_GUIDE_HEADERS, [
+      ['Taylor Fake', 'Training Store', 'GG', 'not-a-number', 10, 1, 3, 2, 10, 30, 20, 1, 10, 1, 10],
+    ]);
+
+    await expect(
+      buildStoredWeekFromCsvText(invalidCsv, 'invalid-numbers.csv', '2026-04-06'),
+    ).rejects.toMatchObject({
+      validationError: {
+        title: 'Invalid numbers found',
+        message: 'Some rows have invalid numbers. Fix the CSV values, then upload it again.',
+        nextStep: 'Review the KPI number columns in the CSV export before trying again.',
+      },
+    });
+  });
+
+  it('returns a recovery error when no valid team member rows are found', async () => {
+    const invalidCsv = toCsv(GAME_GUIDE_HEADERS, [
+      ['', 'Training Store', 'GG', 10, 20, 4, 9, 8, 20, 90, 80, 7, 70, 6, 60],
+    ]);
+
+    await expect(
+      buildStoredWeekFromCsvText(invalidCsv, 'no-members.csv', '2026-04-06'),
+    ).rejects.toMatchObject({
+      validationError: {
+        title: 'No valid team member rows found',
+        message: 'No valid team member rows were found. Check the export and try again.',
+        nextStep: 'Make sure the CSV includes employee names and KPI rows before uploading.',
+      },
+    });
   });
 
   it('creates a StoredWeek from the fake management export CSV shape', async () => {

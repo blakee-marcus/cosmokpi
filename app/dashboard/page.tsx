@@ -6,7 +6,6 @@ import * as m from 'motion/react-m';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { EmployeeKpiTable } from '@/components/dashboard/EmployeeKpiTable';
-import { EmployeeSpotlightSection } from '@/components/dashboard/EmployeeSpotlightSection';
 import { EmptyDashboardState } from '@/components/dashboard/EmptyDashboardState';
 import { KpiMetricGrid } from '@/components/dashboard/KpiMetricGrid';
 import { PerformanceCoachingSection } from '@/components/dashboard/PerformanceCoachingSection';
@@ -20,7 +19,6 @@ import {
   buildDashboardMetrics,
   buildWeekProgressMetrics,
   findPreviousWeekForStore,
-  getTopEmployee,
 } from '@/lib/dashboard/metrics';
 import {
   buildMonthlyPeriod,
@@ -142,15 +140,6 @@ export default function DashboardPage() {
   const filteredEmployees = useMemo(
     () => filterEmployees(rankedEmployees, deferredSearchTerm),
     [deferredSearchTerm, rankedEmployees],
-  );
-
-  const spotlightEmployees = useMemo(
-    () => ({
-      topReplay: getTopEmployee(rankedEmployees, 'replaysSoldPercent', 'guests'),
-      topReviewAsk: getTopEmployee(rankedEmployees, 'reviewsAskedPercent', 'totalGames'),
-      topPreview: getTopEmployee(rankedEmployees, 'previewsPercent', 'totalGames'),
-    }),
-    [rankedEmployees],
   );
 
   const performanceCoachingView = useMemo(() => {
