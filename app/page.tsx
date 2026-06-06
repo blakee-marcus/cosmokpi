@@ -5,16 +5,35 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { HeroSection } from '@/components/homepage/HeroSection';
 import { UploadPanel } from '@/components/homepage/UploadPanel';
 import { trackImpactEvent, trackUploadFailure } from '@/lib/analytics';
+import type { CsvValidationError } from '@/lib/csv-parser';
 import { waitForNextFrame } from '@/lib/homepage/browser';
 import { formatWeekLabel, getMondayDateString } from '@/lib/homepage/dates';
-import { buildStoredWeekFromCsvText, isCsvFile } from '@/lib/homepage/import-week';
-import { saveWeekToStorage } from '@/lib/homepage/storage';
+import {
+  buildStoredWeekFromCsvText,
+  CsvImportError,
+  getFileTypeValidationError,
+  isCsvFile,
+  type ImportWarning,
+} from '@/lib/homepage/import-week';
+import { findStoredWeekForImport, saveWeekToStorage } from '@/lib/homepage/storage';
 import type { StoredWeek } from '@/lib/homepage/types';
+
+type UploadSource = 'file_picker' | 'drag_drop';
+
+type PendingImport = Readonly<{
+  selectedFileName: string;
+  reportTypeLabel: string;
+  source: UploadSource;
+  week: StoredWeek;
+  existingWeek: StoredWeek | null;
+  warnings: ImportWarning[];
+}>;
 
 type UploadState = Readonly<{
   selectedFileName: string | null;
   reportTypeLabel: string | null;
-  error: string | null;
+  error: CsvValidationError | null;
+  pendingImport: PendingImport | null;
   savedWeek: StoredWeek | null;
 }>;
 
@@ -22,13 +41,22 @@ const INITIAL_UPLOAD_STATE: UploadState = {
   selectedFileName: null,
   reportTypeLabel: null,
   error: null,
+  pendingImport: null,
   savedWeek: null,
 };
 
-const CSV_UPLOAD_ERROR = 'Please upload a CSV export from cOSmo.';
-const UNKNOWN_UPLOAD_ERROR = 'Something went wrong while preparing this report.';
+function getValidationError(error: unknown): CsvValidationError {
+  if (error instanceof CsvImportError) {
+    return error.validationError;
+  }
 
-type UploadSource = 'file_picker' | 'drag_drop';
+  return {
+    code: 'unknown',
+    title: 'Import failed',
+    message: 'Something went wrong while preparing this report.',
+    nextStep: 'Check the CSV export and try uploading it again.',
+  };
+}
 
 export default function Home() {
   const [weekStart, setWeekStart] = useState(() => getMondayDateString());
@@ -66,7 +94,7 @@ export default function Home() {
         setUploadState({
           ...INITIAL_UPLOAD_STATE,
           selectedFileName,
-          error: CSV_UPLOAD_ERROR,
+          error: getFileTypeValidationError(),
         });
         return;
       }
@@ -76,15 +104,14 @@ export default function Home() {
         await waitForNextFrame();
 
         const csvText = await file.text();
-        const { week, reportTypeLabel } = await buildStoredWeekFromCsvText(
+        const { week, reportTypeLabel, warnings } = await buildStoredWeekFromCsvText(
           csvText,
           selectedFileName,
           weekStart,
         );
+        const existingWeek = findStoredWeekForImport(week);
 
-        saveWeekToStorage(week);
-
-        trackImpactEvent('KPI Report Saved', {
+        trackImpactEvent('KPI Report Validated', {
           report_type: reportTypeLabel,
           source,
         });
@@ -93,18 +120,25 @@ export default function Home() {
           selectedFileName,
           reportTypeLabel,
           error: null,
-          savedWeek: week,
+          pendingImport: {
+            selectedFileName,
+            reportTypeLabel,
+            source,
+            week,
+            existingWeek,
+            warnings,
+          },
+          savedWeek: null,
         });
       } catch (currentError) {
-        const errorMessage =
-          currentError instanceof Error ? currentError.message : UNKNOWN_UPLOAD_ERROR;
+        const validationError = getValidationError(currentError);
 
-        trackUploadFailure(errorMessage, source);
+        trackUploadFailure(validationError.title, source);
 
         setUploadState({
           ...INITIAL_UPLOAD_STATE,
           selectedFileName,
-          error: errorMessage,
+          error: validationError,
         });
       } finally {
         setIsProcessing(false);
@@ -112,6 +146,48 @@ export default function Home() {
     },
     [isProcessing, weekStart],
   );
+
+  const handleConfirmImport = useCallback(() => {
+    const pendingImport = uploadState.pendingImport;
+
+    if (!pendingImport) return;
+
+    const savedStorage = saveWeekToStorage(pendingImport.week);
+    const savedWeek =
+      savedStorage.weeks.find((week) => week.id === pendingImport.week.id) ?? pendingImport.week;
+
+    trackImpactEvent('KPI Report Saved', {
+      report_type: pendingImport.reportTypeLabel,
+      source: pendingImport.source,
+      import_mode: pendingImport.existingWeek ? 'replace' : 'new',
+    });
+
+    setUploadState({
+      selectedFileName: pendingImport.selectedFileName,
+      reportTypeLabel: pendingImport.reportTypeLabel,
+      error: null,
+      pendingImport: null,
+      savedWeek,
+    });
+  }, [uploadState.pendingImport]);
+
+  const handleCancelImport = useCallback(() => {
+    const pendingImport = uploadState.pendingImport;
+
+    trackImpactEvent('KPI Report Import Canceled', {
+      stage: pendingImport?.existingWeek ? 'duplicate_preview' : 'preview',
+    });
+
+    setUploadState({
+      ...INITIAL_UPLOAD_STATE,
+      selectedFileName: pendingImport?.selectedFileName ?? uploadState.selectedFileName,
+    });
+  }, [uploadState.pendingImport, uploadState.selectedFileName]);
+
+  const handleUploadAnotherWeek = useCallback(() => {
+    setUploadState(INITIAL_UPLOAD_STATE);
+    fileInputRef.current?.focus();
+  }, []);
 
   const handleDrop = useCallback(
     (event: DragEvent<HTMLLabelElement>) => {
@@ -148,6 +224,7 @@ export default function Home() {
               fileInputRef={fileInputRef}
               isDragging={isDragging}
               isProcessing={isProcessing}
+              pendingImport={uploadState.pendingImport}
               reportTypeLabel={uploadState.reportTypeLabel}
               savedWeek={uploadState.savedWeek}
               selectedFileName={uploadState.selectedFileName}
@@ -156,6 +233,9 @@ export default function Home() {
               onDragStateChange={setIsDragging}
               onDrop={handleDrop}
               onFileInputChange={handleFileInput}
+              onCancelImport={handleCancelImport}
+              onConfirmImport={handleConfirmImport}
+              onUploadAnotherWeek={handleUploadAnotherWeek}
               onWeekStartChange={handleWeekStartChange}
             />
           </div>

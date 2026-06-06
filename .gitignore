@@ -4,6 +4,9 @@ docs/*
 !docs/engineering-handoff.md
 !docs/sprint-5-mini-specs.md
 !docs/sprint-6-mini-specs.md
+!docs/sprint-7-mini-spec.md
+!docs/sprint-8-mini-spec.md
+!docs/sprint-9-mini-spec.md
 
 AGENTS.md
 CLAUDE.md

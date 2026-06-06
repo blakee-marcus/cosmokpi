@@ -60,6 +60,14 @@ Run tests with `npm run test`. Run the full release check with `npm run check`.
 
 Run browser smoke coverage with `npm run test:browser`. The Playwright smoke starts or reuses the local Next dev server at `http://localhost:3000`.
 
+## Runtime and Package Manager
+
+Use Node `22.14.0` from `.nvmrc`. `package.json` declares the supported engine range as Node `>=22 <23` and the expected package manager as npm `10.9.2`.
+
+Install with `npm ci` from the checked-in `package-lock.json`. Do not use Yarn, pnpm, or ad hoc installs for this repo.
+
+If `nvm use` is unavailable on the local machine, Homebrew Node 22 can be used with `PATH=/opt/homebrew/opt/node@22/bin:$PATH`.
+
 Current unit coverage focuses on pure business logic: CSV detection/parsing, employee merge and totals, import-to-storage conversion, localStorage persistence, monthly aggregation, and analytics/privacy safety.
 
 Current test files:
@@ -183,3 +191,112 @@ Known remaining risks:
 - Migration coverage exercises localStorage contracts in unit tests; it does not cover every historically possible malformed user payload.
 - Browser smoke still covers one fake management-shaped import path and is not comprehensive visual regression coverage.
 - The shell still reports a Node deprecation warning during Vitest/Playwright commands on Node 26, while the project declares Node `>=22 <23`.
+
+## Sprint 7 Verification
+
+Sprint 7 reviewed runtime and repository hygiene without changing product behavior. The runtime source of truth remains `.nvmrc` at Node `22.14.0`, `package.json` engines at Node `>=22 <23`, and `packageManager` at npm `10.9.2`.
+
+Findings:
+
+- The default shell was using Node `v26.0.0` and npm `11.12.1`, which does not match the declared project runtime.
+- Homebrew Node 22 is installed at `/opt/homebrew/opt/node@22/bin` and reports Node `v22.14.0` with npm `10.9.2`.
+- The Node 26 `[DEP0205] module.register()` warning traces to `@tailwindcss/node`; it does not reproduce under Node 22 and is treated as a wrong-runtime artifact.
+- The Playwright `NO_COLOR env is ignored due to FORCE_COLOR env being set` warning is a shell/test-output conflict. Unsetting `NO_COLOR` for the browser smoke removes it; no app change is needed.
+- The Next browser smoke warning about `scroll-behavior: smooth` was resolved by marking the existing root smooth-scroll behavior with `data-scroll-behavior="smooth"` on `<html>`.
+- `npm ls --depth=0` reports optional wasm helper packages as extraneous: `@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads`, `@napi-rs/wasm-runtime`, and `@tybys/wasm-util`.
+- Those packages are lockfile-owned optional/transitive helper packages for wasm32 variants such as Tailwind, Rolldown, Sharp, and resolver bindings. A clean `npm ci` with npm `10.9.2` still reports them, so this is documented as an npm optional-dependency tree reporting artifact rather than dependency drift.
+
+Changed files:
+
+- `.gitignore`: allowlists the Sprint 7 mini-spec under the existing `docs/*` ignore rule.
+- `README.md`: documents Node/npm setup expectations and removes career-positioning analytics wording.
+- `app/layout.tsx`: declares the existing smooth-scroll behavior for Next route-transition handling.
+- `docs/dev-process.md`: adds runtime-doc alignment to cleanup discipline and updates stale browser-coverage guidance.
+- `docs/engineering-handoff.md`: records Sprint 7 runtime, dependency, verification, privacy, risk, and deferred-work findings.
+- `docs/sprint-7-mini-spec.md`: captures the Sprint 7 scope and backlog acceptance criteria.
+
+Verification run on June 2, 2026:
+
+- `npm run test`: passed, 11 files and 46 tests.
+- `npm run check`: passed under Node 22, including lint, typecheck, and production build.
+- `npm run test:browser`: passed under Node 22 with `NO_COLOR` unset, 1 Chromium smoke.
+- `npm ls --depth=0`: exits successfully but reports the optional wasm helper packages listed above as extraneous.
+
+Privacy review:
+
+- No product behavior, analytics behavior, UI, parser logic, auth, database, cloud sync, or network persistence changed.
+- No real CSV files, real employee names, real KPI values, secrets, URLs, or production identifiers were added.
+- Sprint 7 documentation keeps the local-first privacy model and setup ownership clear.
+
+Known remaining risks:
+
+- `npm ls --depth=0` output is not visually clean because of npm optional-dependency tree reporting, although it exits successfully.
+- Local shells using Node 26 will continue to show unsupported-engine and Node deprecation warnings until the shell PATH or version manager is aligned to Node 22.
+- Existing npm audit output still reports dependency vulnerabilities; broad dependency upgrades are intentionally deferred because Sprint 7 did not require them.
+
+Deferred work:
+
+- Decide in a later maintenance sprint whether to adjust the dependency set or npm version after upstream optional-dependency reporting changes.
+
+## Sprint 8 Verification
+
+Sprint 8 made a dependency-maintenance decision under the supported runtime without expanding product scope. The selected outcome was **C. Minimal dependency fix**.
+
+Baseline captured on June 2, 2026 with `PATH=/opt/homebrew/opt/node@22/bin:$PATH`:
+
+- Runtime: Node `v22.14.0`, npm `10.9.2`.
+- `git status --short`: existing dirty tree from prior Sprint 7 work before Sprint 8 changes: `.gitignore`, `README.md`, `app/layout.tsx`, `docs/dev-process.md`, `docs/engineering-handoff.md`, and untracked `docs/sprint-7-mini-spec.md`.
+- `npm ls --depth=0`: exited successfully, but reported optional wasm helper packages as extraneous: `@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads`, `@napi-rs/wasm-runtime`, and `@tybys/wasm-util`.
+- `npm audit`: failed with 3 reported vulnerabilities: moderate `brace-expansion`, high `next`, and moderate `postcss` through `next`.
+- `npm run test`: passed, 11 files and 46 tests.
+- `npm run check`: passed under Node 22, including lint, typecheck, and production build.
+
+What was investigated:
+
+- Optional wasm helper package reporting from `npm ls --depth=0`.
+- Audit findings for `brace-expansion`, `next`, and bundled `postcss`.
+- Runtime consistency under Node `22.14.0` and npm `10.9.2`.
+- Verification hygiene after dependency changes.
+
+Root cause findings:
+
+- The optional wasm helper packages are lockfile-owned optional transitive packages for wasm32/native helper paths, including Tailwind/Rolldown-style bindings. `npm explain` still labels the top-level helper nodes as extraneous, so this remains npm optional-dependency tree reporting noise rather than direct dependency drift.
+- The `brace-expansion@5.0.5` audit finding came from the TypeScript ESLint transitive tree through `@typescript-eslint/typescript-estree`.
+- The high `next@16.2.4` audit finding was in the direct app framework dependency. npm identified `next@16.2.7` as a non-major fix target for the high Next advisories.
+- The remaining PostCSS audit finding is from `next/node_modules/postcss@8.4.31`. npm's available fix path requires `npm audit fix --force` and proposes a breaking downgrade to `next@9.3.3`, so it is not an acceptable Sprint 8 change.
+- The first post-change `npm run check` attempt failed because ESLint tried to scan missing `test-results` before Playwright recreated the ignored artifact directory. Re-running after the browser smoke created `test-results` passed. This is verification hygiene noise and is not a product behavior issue.
+
+What changed:
+
+- `package.json`: updated `next` from `16.2.4` to `16.2.7` and `eslint-config-next` from `16.2.4` to `16.2.7`.
+- `package-lock.json`: updated matching Next packages, Next SWC optional packages, `@next/eslint-plugin-next`, and the transitive `brace-expansion` lock entry from `5.0.5` to `5.0.6`.
+- `.gitignore`: allowlists `docs/sprint-8-mini-spec.md` under the existing `docs/*` ignore rule.
+- `docs/sprint-8-mini-spec.md`: records the Sprint 8 maintenance decision, scope, acceptance criteria, risks, and rollback notes.
+- `docs/engineering-handoff.md`: records Sprint 8 findings, changes, verification, deferrals, and remaining risks.
+
+What was intentionally deferred:
+
+- No broad dependency update was run.
+- No new dependencies were added.
+- No forced audit fix was run because npm proposes a breaking downgrade to `next@9.3.3`.
+- No product behavior, UI, parser, export, auth, database, cloud, analytics, or unrelated dependency work was performed.
+- The npm optional-dependency `extraneous` labels were documented instead of worked around.
+
+Verification run after the dependency fix on June 2, 2026:
+
+- `npm run test`: passed, 11 files and 46 tests.
+- `npm run check`: passed under Node 22, including lint, typecheck, and production build with Next `16.2.7`.
+- `npm run test:browser`: passed, 1 Chromium smoke. The shell still emitted the known `NO_COLOR`/`FORCE_COLOR` warning during Playwright output.
+- `npm ls --depth=0`: exits successfully but still reports the optional wasm helper packages as extraneous.
+- `npm audit`: now reports 3 moderate vulnerabilities, all from the remaining `postcss <8.5.10` path through `next` and `@vercel/analytics`; high Next and moderate `brace-expansion` findings are resolved.
+
+Remaining risks:
+
+- `npm audit` is not clean because current Next still bundles vulnerable-range PostCSS according to npm audit metadata.
+- The accepted PostCSS risk should be revisited when a non-breaking Next release resolves the bundled PostCSS advisory.
+- `npm ls --depth=0` output is still not visually clean because of optional dependency reporting noise.
+- ESLint can fail if an ignored artifact directory named in its search set is absent; this was observed once for `test-results` and passed after Playwright recreated the directory.
+
+Recommended future maintenance trigger:
+
+- Open a follow-up maintenance sprint when npm audit offers a non-breaking Next/PostCSS remediation, when npm changes optional-dependency reporting behavior, when the remaining audit severity increases, or when verification hygiene around ignored artifact directories starts blocking repeatable local checks.

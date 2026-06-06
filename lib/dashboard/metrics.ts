@@ -13,6 +13,10 @@ import type {
   WeekProgressMetric,
 } from '@/lib/dashboard/types';
 
+function formatCount(value: number) {
+  return value.toLocaleString('en-US');
+}
+
 export function getStoreKpiRates(period: Pick<DashboardPeriod, 'totals'>): StoreKpiRates {
   return {
     replayPercent: safePercent(period.totals.replaysSold, period.totals.guests),
@@ -51,7 +55,7 @@ export function getProgressLabel(status: ProgressStatus) {
     case 'improved':
       return 'Improved';
     case 'steady':
-      return 'Held steady';
+      return 'Steady';
     default:
       return 'Needs follow-up';
   }
@@ -89,12 +93,12 @@ export function buildWeekProgressMetrics(
 
   return [
     {
-      label: 'Replay conversion',
+      label: 'Replay discount rate',
       value: currentRates.replayPercent,
       previousValue: previousRates.replayPercent,
       delta: currentRates.replayPercent - previousRates.replayPercent,
       goal: KPI_GOALS.replayPercent,
-      detail: 'Replay sales compared with guest volume.',
+      detail: 'How often guests used replay discounts for consecutive games or player tickets.',
     },
     {
       label: 'Review ask rate',
@@ -102,7 +106,7 @@ export function buildWeekProgressMetrics(
       previousValue: previousRates.reviewsAskedPercent,
       delta: currentRates.reviewsAskedPercent - previousRates.reviewsAskedPercent,
       goal: KPI_GOALS.reviewsAskedPercent,
-      detail: 'Review asks compared with games hosted.',
+      detail: 'How consistently the team asked guests for reviews.',
     },
     {
       label: 'Shared replay rate',
@@ -110,7 +114,7 @@ export function buildWeekProgressMetrics(
       previousValue: previousRates.sharedReplayPercent,
       delta: currentRates.sharedReplayPercent - previousRates.sharedReplayPercent,
       goal: KPI_GOALS.sharedReplayPercent,
-      detail: 'Shared replay moments compared with games hosted.',
+      detail: 'How often the team shared replay discount options during guest conversations.',
     },
     {
       label: 'Preview ask rate',
@@ -118,7 +122,7 @@ export function buildWeekProgressMetrics(
       previousValue: previousRates.previewsPercent,
       delta: currentRates.previewsPercent - previousRates.previewsPercent,
       goal: KPI_GOALS.previewsPercent,
-      detail: 'Preview asks compared with games hosted.',
+      detail: 'How often guests were invited to preview another adventure.',
     },
   ];
 }
@@ -135,9 +139,11 @@ export function getProgressSummary(metrics: WeekProgressMetric[]) {
 
     if (status === 'improved') {
       improvedCount += 1;
+
       if (!strongestGain || metric.delta > strongestGain.delta) {
         strongestGain = metric;
       }
+
       continue;
     }
 
@@ -147,6 +153,7 @@ export function getProgressSummary(metrics: WeekProgressMetric[]) {
     }
 
     needsFollowUpCount += 1;
+
     if (!priorityFollowUp || metric.delta < priorityFollowUp.delta) {
       priorityFollowUp = metric;
     }
@@ -170,7 +177,7 @@ export function getEmployeeProgressSummary(
   if (!hasPreviousPeriod) {
     return {
       label: `No prior ${periodName}`,
-      detail: 'Add another report',
+      detail: 'Save another report to compare.',
       status: null,
     };
   }
@@ -178,7 +185,7 @@ export function getEmployeeProgressSummary(
   if (!previousEmployee) {
     return {
       label: `New this ${periodName}`,
-      detail: 'No matched prior row',
+      detail: 'No prior result for this team member.',
       status: null,
     };
   }
@@ -197,8 +204,8 @@ export function getEmployeeProgressSummary(
 
   if (!largestMovement || Math.abs(largestMovement.delta) <= STEADY_DELTA_THRESHOLD) {
     return {
-      label: 'Held steady',
-      detail: 'No major KPI movement',
+      label: 'Steady',
+      detail: 'No major KPI movement.',
       status: 'steady',
     };
   }
@@ -285,6 +292,7 @@ export function getNewsletterRows(week: StoredWeek) {
       const name = String(employee.name ?? '')
         .trim()
         .toLowerCase();
+
       return name !== 'management';
     })
     .sort((a, b) => {
@@ -332,20 +340,20 @@ export function buildDashboardMetrics(period: DashboardPeriod) {
 
   return [
     {
-      label: 'Replay conversion',
+      label: 'Replay discount rate',
       value: rates.replayPercent,
       goal: KPI_GOALS.replayPercent,
-      detail: `${totals.replaysSold.toLocaleString('en-US')} replays sold from ${totals.guests.toLocaleString(
-        'en-US',
-      )} guests served.`,
+      detail: `${formatCount(totals.replaysSold)} replay discounts used by ${formatCount(
+        totals.guests,
+      )} guests.`,
       direction: 'higher' as const,
     },
     {
       label: 'Review ask rate',
       value: rates.reviewsAskedPercent,
       goal: KPI_GOALS.reviewsAskedPercent,
-      detail: `${totals.reviewsAsked.toLocaleString('en-US')} review asks across ${totals.totalGames.toLocaleString(
-        'en-US',
+      detail: `${formatCount(totals.reviewsAsked)} review asks across ${formatCount(
+        totals.totalGames,
       )} games.`,
       direction: 'higher' as const,
     },
@@ -353,8 +361,8 @@ export function buildDashboardMetrics(period: DashboardPeriod) {
       label: 'Shared replay rate',
       value: rates.sharedReplayPercent,
       goal: KPI_GOALS.sharedReplayPercent,
-      detail: `${totals.sharedReplay.toLocaleString('en-US')} shared replay moments across ${totals.totalGames.toLocaleString(
-        'en-US',
+      detail: `${formatCount(totals.sharedReplay)} replay discount conversations across ${formatCount(
+        totals.totalGames,
       )} games.`,
       direction: 'higher' as const,
     },
@@ -362,8 +370,8 @@ export function buildDashboardMetrics(period: DashboardPeriod) {
       label: 'Preview ask rate',
       value: rates.previewsPercent,
       goal: KPI_GOALS.previewsPercent,
-      detail: `${totals.afterGamePreviews.toLocaleString('en-US')} previews shared across ${totals.totalGames.toLocaleString(
-        'en-US',
+      detail: `${formatCount(totals.afterGamePreviews)} previews shared across ${formatCount(
+        totals.totalGames,
       )} games.`,
       direction: 'higher' as const,
     },

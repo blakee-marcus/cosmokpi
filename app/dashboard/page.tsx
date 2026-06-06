@@ -9,10 +9,12 @@ import { EmployeeKpiTable } from '@/components/dashboard/EmployeeKpiTable';
 import { EmployeeSpotlightSection } from '@/components/dashboard/EmployeeSpotlightSection';
 import { EmptyDashboardState } from '@/components/dashboard/EmptyDashboardState';
 import { KpiMetricGrid } from '@/components/dashboard/KpiMetricGrid';
+import { PerformanceCoachingSection } from '@/components/dashboard/PerformanceCoachingSection';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { WeekProgressSection } from '@/components/dashboard/WeekProgressSection';
 import { trackImpactEvent } from '@/lib/analytics';
 import { getEmployeeComparisonKey } from '@/lib/dashboard/comparison';
+import { buildPerformanceCoachingViewModel } from '@/lib/dashboard/coaching';
 import { EMPTY_STORAGE } from '@/lib/dashboard/constants';
 import {
   buildDashboardMetrics,
@@ -151,6 +153,15 @@ export default function DashboardPage() {
     [rankedEmployees],
   );
 
+  const performanceCoachingView = useMemo(() => {
+    if (!selectedPeriod) return null;
+
+    return buildPerformanceCoachingViewModel({
+      selectedPeriod,
+      previousPeriod,
+    });
+  }, [previousPeriod, selectedPeriod]);
+
   const resetTableControls = useCallback(() => {
     setSearchTerm('');
     setSortKey(DEFAULT_SORT_KEY);
@@ -248,7 +259,9 @@ export default function DashboardPage() {
     <main
       id='main-content'
       className='min-h-[calc(100dvh-82px)] bg-off-white px-5 py-8 text-cosmo-black sm:px-8 lg:px-14'>
-      <section aria-label='KPI dashboard' className='mx-auto w-full max-w-[1440px] space-y-8'>
+      <section
+        aria-label='Performance dashboard'
+        className='mx-auto w-full max-w-[1440px] space-y-8'>
         <DashboardHeader
           selectedPeriod={selectedPeriod}
           selectedWeek={selectedWeek}
@@ -280,11 +293,9 @@ export default function DashboardPage() {
               metrics={weekProgressMetrics}
             />
 
-            <EmployeeSpotlightSection
-              topReplay={spotlightEmployees.topReplay}
-              topReviewAsk={spotlightEmployees.topReviewAsk}
-              topPreview={spotlightEmployees.topPreview}
-            />
+            {performanceCoachingView ? (
+              <PerformanceCoachingSection coachingView={performanceCoachingView} />
+            ) : null}
 
             <EmployeeKpiTable
               filteredEmployees={filteredEmployees}

@@ -1,6 +1,8 @@
 import type { ChangeEvent, DragEvent, RefObject } from 'react';
 import * as m from 'motion/react-m';
 
+import type { CsvValidationError } from '@/lib/csv-parser';
+import type { ImportWarning } from '@/lib/homepage/import-week';
 import type { StoredWeek } from '@/lib/homepage/types';
 import { panelIn } from '@/lib/motion';
 import { FileDropzone } from './FileDropzone';
@@ -8,10 +10,17 @@ import { UploadStatus } from './UploadStatus';
 import { WeekPicker } from './WeekPicker';
 
 type UploadPanelProps = {
-  error: string | null;
+  error: CsvValidationError | null;
   fileInputRef: RefObject<HTMLInputElement | null>;
   isDragging: boolean;
   isProcessing: boolean;
+  pendingImport: {
+    selectedFileName: string;
+    reportTypeLabel: string;
+    week: StoredWeek;
+    existingWeek: StoredWeek | null;
+    warnings: ImportWarning[];
+  } | null;
   reportTypeLabel: string | null;
   savedWeek: StoredWeek | null;
   selectedFileName: string | null;
@@ -20,6 +29,9 @@ type UploadPanelProps = {
   onDragStateChange: (isDragging: boolean) => void;
   onDrop: (event: DragEvent<HTMLLabelElement>) => void;
   onFileInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onCancelImport: () => void;
+  onConfirmImport: () => void;
+  onUploadAnotherWeek: () => void;
   onWeekStartChange: (weekStart: string) => void;
 };
 
@@ -28,6 +40,7 @@ export function UploadPanel({
   fileInputRef,
   isDragging,
   isProcessing,
+  pendingImport,
   reportTypeLabel,
   savedWeek,
   selectedFileName,
@@ -36,6 +49,9 @@ export function UploadPanel({
   onDragStateChange,
   onDrop,
   onFileInputChange,
+  onCancelImport,
+  onConfirmImport,
+  onUploadAnotherWeek,
   onWeekStartChange,
 }: UploadPanelProps) {
   return (
@@ -75,9 +91,13 @@ export function UploadPanel({
           <UploadStatus
             error={error}
             isProcessing={isProcessing}
+            pendingImport={pendingImport}
             reportTypeLabel={reportTypeLabel}
             savedWeek={savedWeek}
             selectedFileName={selectedFileName}
+            onCancelImport={onCancelImport}
+            onConfirmImport={onConfirmImport}
+            onUploadAnotherWeek={onUploadAnotherWeek}
           />
         </div>
       </div>

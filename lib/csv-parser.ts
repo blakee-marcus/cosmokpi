@@ -12,12 +12,30 @@ import {
 } from './csv-detection';
 import type { EmployeeKpiRowWithSources, ReportType } from './fltm-types';
 
+export type CsvValidationErrorCode =
+  | 'missing_required_columns'
+  | 'unsupported_report_type'
+  | 'no_team_members'
+  | 'invalid_numeric_values'
+  | 'empty_csv'
+  | 'could_not_detect_store'
+  | 'not_csv'
+  | 'unknown';
+
+export type CsvValidationError = {
+  code: CsvValidationErrorCode;
+  title: string;
+  message: string;
+  nextStep: string;
+};
+
 export type ParsedCsvResult = {
   reportType: ReportType;
   detectedStore: string;
   rows: EmployeeKpiRowWithSources[];
   contentHash: string;
   error?: string;
+  validationError?: CsvValidationError;
 };
 
 const PERCENTAGE_COLUMNS = new Set([
@@ -29,8 +47,98 @@ const PERCENTAGE_COLUMNS = new Set([
   'postGamePreviewPercent',
 ]);
 
+const VALIDATION_ERROR_COPY: Record<CsvValidationErrorCode, CsvValidationError> = {
+  missing_required_columns: {
+    code: 'missing_required_columns',
+    title: 'Missing required columns',
+    message:
+      'This file does not include the columns needed for the Game Guide KPI report.',
+    nextStep: 'Download the weekly Game Guide CSV from cOSmo FLTM Reports and try again.',
+  },
+  unsupported_report_type: {
+    code: 'unsupported_report_type',
+    title: 'Unsupported report type',
+    message:
+      'This CSV has the shared KPI columns, but it does not look like a supported Game Guide or GES report.',
+    nextStep: 'Export the weekly Game Guide or GES KPI report from cOSmo FLTM Reports.',
+  },
+  no_team_members: {
+    code: 'no_team_members',
+    title: 'No team member rows found',
+    message: 'This CSV has headers but does not include any team member KPI rows.',
+    nextStep: 'Check that the export includes employee rows, then upload the CSV again.',
+  },
+  invalid_numeric_values: {
+    code: 'invalid_numeric_values',
+    title: 'Invalid numeric values',
+    message: 'One or more KPI columns contains a value that is not a number.',
+    nextStep: 'Fix the numeric KPI cells in cOSmo or the CSV export, then upload it again.',
+  },
+  empty_csv: {
+    code: 'empty_csv',
+    title: 'Empty CSV',
+    message: 'This file is empty or does not include a readable CSV header row.',
+    nextStep: 'Export a fresh weekly CSV from cOSmo FLTM Reports and try again.',
+  },
+  could_not_detect_store: {
+    code: 'could_not_detect_store',
+    title: 'Could not detect store',
+    message: 'The team member rows do not include a store name.',
+    nextStep: 'Export the report with the store column included, then upload it again.',
+  },
+  not_csv: {
+    code: 'not_csv',
+    title: 'File is not a CSV',
+    message: 'This upload does not look like a CSV export.',
+    nextStep: 'Choose the .csv file downloaded from cOSmo FLTM Reports.',
+  },
+  unknown: {
+    code: 'unknown',
+    title: 'Import failed',
+    message: 'Something went wrong while preparing this report.',
+    nextStep: 'Check the CSV export and try uploading it again.',
+  },
+};
+
+export function getCsvValidationError(
+  code: CsvValidationErrorCode,
+  detail?: string,
+): CsvValidationError {
+  const baseError = VALIDATION_ERROR_COPY[code];
+
+  return {
+    ...baseError,
+    message: detail ? `${baseError.message} ${detail}` : baseError.message,
+  };
+}
+
+function buildErrorResult(
+  code: CsvValidationErrorCode,
+  contentHash: string,
+  detail?: string,
+): ParsedCsvResult {
+  const validationError = getCsvValidationError(code, detail);
+
+  return {
+    reportType: 'unknown',
+    detectedStore: 'Unknown',
+    rows: [],
+    contentHash,
+    error: validationError.message,
+    validationError,
+  };
+}
+
 function parseNumericCsvValue(header: string, rawValue: string) {
+  if (!rawValue) {
+    return 0;
+  }
+
   const value = Number(rawValue || 0);
+
+  if (!Number.isFinite(value)) {
+    throw new Error(`Column ${header} contains a non-numeric value.`);
+  }
 
   if (PERCENTAGE_COLUMNS.has(header) && value >= 0 && value <= 1) {
     return value * 100;
@@ -45,71 +153,94 @@ function parseNumericCsvValue(header: string, rawValue: string) {
  */
 export async function parseFltmCsv(fileContent: string): Promise<ParsedCsvResult> {
   try {
+    const contentHash = await computeFileHash(fileContent);
+
+    if (!fileContent.trim()) {
+      return buildErrorResult('empty_csv', contentHash);
+    }
+
     // Parse raw CSV
     const rawRows = parseCsvRaw(fileContent);
 
-    if (rawRows.length < 2) {
-      return {
-        reportType: 'unknown',
-        detectedStore: 'Unknown',
-        rows: [],
-        contentHash: await computeFileHash(fileContent),
-        error: 'This CSV does not include the team KPI rows we need.',
-      };
+    if (rawRows.length === 0) {
+      return buildErrorResult('empty_csv', contentHash);
     }
 
     // Extract and clean headers
     const headers = extractHeaders(rawRows);
 
+    if (headers.length === 0 || headers.every((header) => !header)) {
+      return buildErrorResult('empty_csv', contentHash);
+    }
+
     // Detect report type
     const detection = detectReportType(headers);
 
     if (detection.error) {
-      return {
-        reportType: 'unknown',
-        detectedStore: 'Unknown',
-        rows: [],
-        contentHash: await computeFileHash(fileContent),
-        error: detection.error,
-      };
+      return buildErrorResult('missing_required_columns', contentHash, detection.error);
+    }
+
+    if (detection.type === 'unknown') {
+      return buildErrorResult('unsupported_report_type', contentHash);
     }
 
     // Get numeric columns for this report type
     const numericColumns = getNumericColumnsForType(detection.type);
 
     // Parse data rows
-    const rows = rawRows.slice(1).map((row) => {
-      const record = headers.reduce<Record<string, string | number>>((acc, header, index) => {
-        const rawValue = row[index] ?? '';
-        acc[header] = numericColumns.has(header)
-          ? parseNumericCsvValue(header, rawValue)
-          : rawValue;
-        return acc;
-      }, {});
+    const rows: EmployeeKpiRowWithSources[] = [];
 
-      return record as EmployeeKpiRowWithSources;
-    });
+    for (const row of rawRows.slice(1)) {
+      try {
+        const record = headers.reduce<Record<string, string | number>>((acc, header, index) => {
+          const rawValue = row[index] ?? '';
+          acc[header] = numericColumns.has(header)
+            ? parseNumericCsvValue(header, rawValue)
+            : rawValue;
+          return acc;
+        }, {});
+
+        rows.push(record as EmployeeKpiRowWithSources);
+      } catch (error) {
+        return buildErrorResult(
+          'invalid_numeric_values',
+          contentHash,
+          error instanceof Error ? error.message : undefined,
+        );
+      }
+    }
+
+    const teamRows = rows.filter((row) => String(row.name ?? '').trim());
+
+    if (teamRows.length === 0) {
+      return buildErrorResult('no_team_members', contentHash);
+    }
 
     // Extract detected store name from first row
-    const detectedStore = rows[0]?.storeName ? String(rows[0].storeName) : 'Unknown';
+    const detectedStore = teamRows.find((row) => String(row.storeName ?? '').trim())?.storeName
+      ? String(teamRows.find((row) => String(row.storeName ?? '').trim())?.storeName)
+      : 'Unknown';
 
-    // Compute content hash for deduplication
-    const contentHash = await computeFileHash(fileContent);
+    if (detectedStore === 'Unknown') {
+      return buildErrorResult('could_not_detect_store', contentHash);
+    }
 
     return {
       reportType: detection.type,
       detectedStore,
-      rows,
+      rows: teamRows,
       contentHash,
     };
   } catch (error) {
+    const validationError = getCsvValidationError('unknown');
+
     return {
       reportType: 'unknown',
       detectedStore: 'Unknown',
       rows: [],
       contentHash: 'error',
-      error:
-        error instanceof Error ? error.message : 'Something went wrong while parsing this CSV.',
+      error: validationError.message,
+      validationError,
     };
   }
 }

@@ -11,6 +11,10 @@ function isSameStoreWeek(storedWeek: StoredWeek, week: StoredWeek) {
   );
 }
 
+export function findStoredWeekForImport(week: StoredWeek) {
+  return getKpiStorage().weeks.find((storedWeek) => isSameStoreWeek(storedWeek, week)) ?? null;
+}
+
 export function getKpiStorage(): KpiStorage {
   if (typeof window === 'undefined') {
     return EMPTY_STORAGE;

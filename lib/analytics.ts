@@ -25,9 +25,17 @@ type ImpactEventProperties = {
     reason: Exclude<UploadFailureReason, 'not_csv'>;
     source: UploadSource;
   };
+  'KPI Report Validated': {
+    source: UploadSource;
+    report_type: string;
+  };
   'KPI Report Saved': {
     source: UploadSource;
     report_type: string;
+    import_mode?: 'new' | 'replace';
+  };
+  'KPI Report Import Canceled': {
+    stage: 'preview' | 'duplicate_preview';
   };
   'Dashboard View Mode Changed': {
     view_mode: DashboardViewMode;

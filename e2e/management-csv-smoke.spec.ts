@@ -27,6 +27,9 @@ test('imports fake management CSV and exercises dashboard review paths', async (
     .locator('label[aria-label="Upload cOSmo CSV file"]')
     .dispatchEvent('drop', { dataTransfer });
 
+  await expect(page.getByText('Review import before saving')).toBeVisible();
+  await page.getByRole('button', { name: 'Save local report' }).click();
+
   await expect(page.getByText('Report saved successfully')).toBeVisible();
   await expect(page.getByText(fakeManagementFileName)).toBeVisible();
   await expect(page.getByText('Report type: Game Guide')).toBeVisible();

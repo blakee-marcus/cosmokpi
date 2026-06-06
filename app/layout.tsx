@@ -47,7 +47,10 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang='en' className='h-full scroll-smooth bg-off-white antialiased'>
+    <html
+      lang='en'
+      data-scroll-behavior='smooth'
+      className='h-full scroll-smooth bg-off-white antialiased'>
       <body className='min-h-dvh overflow-x-hidden bg-off-white font-sans text-cosmo-black'>
         <a
           href='#main-content'

@@ -28,7 +28,7 @@ function getSourceFileDateLabel(selectedPeriod: DashboardPeriod) {
     .map((sourceFile) => sourceFile.importedAt)
     .filter((importedAt): importedAt is string => Boolean(importedAt));
 
-  if (importedAtValues.length === 0) return 'Unknown';
+  if (!importedAtValues.length) return 'Unknown';
 
   const latestImportedAt = importedAtValues
     .map((importedAt) => new Date(importedAt))
@@ -45,31 +45,31 @@ function getSourceFileLabel(selectedPeriod: DashboardPeriod) {
 
   const uniqueSourceFileNames = [...new Set(sourceFileNames)];
 
-  return uniqueSourceFileNames.length > 0
-    ? uniqueSourceFileNames.join(', ')
-    : 'No source file listed';
+  return uniqueSourceFileNames.length ? uniqueSourceFileNames.join(', ') : 'No source file listed';
+}
+
+function getReportCountLabel(selectedPeriod: DashboardPeriod) {
+  return selectedPeriod.includedWeekCount === 1
+    ? '1 report'
+    : `${selectedPeriod.includedWeekCount} reports`;
 }
 
 export function StatsGrid({ selectedPeriod }: { selectedPeriod: DashboardPeriod }) {
   const isMonthly = selectedPeriod.periodType === 'monthly';
-
   const sourceFileDateLabel = getSourceFileDateLabel(selectedPeriod);
   const sourceFileLabel = getSourceFileLabel(selectedPeriod);
 
-  const reportCountLabel =
-    selectedPeriod.includedWeekCount === 1
-      ? '1 saved report'
-      : `${selectedPeriod.includedWeekCount} saved reports`;
-
   return (
-    <m.section layout variants={listContainer} className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+    <m.section
+      layout
+      variants={listContainer}
+      aria-label='Report summary'
+      className='snappy-section grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
       <m.div layout variants={listItem}>
         <SmallStatCard
           label='Team members'
           value={formatNumber(selectedPeriod.totals.employees)}
-          detail={
-            isMonthly ? 'Unique team members in this month' : 'Included in this uploaded report'
-          }
+          detail={isMonthly ? 'Unique team members this month' : 'Team members in this report'}
         />
       </m.div>
 
@@ -77,9 +77,7 @@ export function StatsGrid({ selectedPeriod }: { selectedPeriod: DashboardPeriod 
         <SmallStatCard
           label='Games hosted'
           value={formatNumber(selectedPeriod.totals.totalGames)}
-          detail={
-            isMonthly ? 'Total games across included reports' : 'Total games connected to this week'
-          }
+          detail={isMonthly ? 'Total games from included reports' : 'Games from this report'}
         />
       </m.div>
 
@@ -87,14 +85,14 @@ export function StatsGrid({ selectedPeriod }: { selectedPeriod: DashboardPeriod 
         <SmallStatCard
           label='Guests served'
           value={formatNumber(selectedPeriod.totals.guests)}
-          detail='Guest volume represented in the KPI rows'
+          detail='Guest volume included in this report'
         />
       </m.div>
 
       <m.div layout variants={listItem}>
         <SmallStatCard
-          label={isMonthly ? 'Reports included' : 'Source file'}
-          value={isMonthly ? reportCountLabel : sourceFileDateLabel}
+          label={isMonthly ? 'Reports included' : 'Uploaded report'}
+          value={isMonthly ? getReportCountLabel(selectedPeriod) : sourceFileDateLabel}
           detail={isMonthly ? selectedPeriod.includedWeekLabels.join(', ') : sourceFileLabel}
         />
       </m.div>

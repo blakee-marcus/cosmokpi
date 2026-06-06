@@ -85,6 +85,7 @@ If fewer than two are true, do not add it.
 ### Critical
 
 - Keep the unit test runner and `npm test` script healthy as business logic changes.
+- Keep `.nvmrc`, `package.json` engines, `packageManager`, CI setup, and README setup docs aligned.
 - Keep privacy-safety tests for `lib/analytics.ts` constrained to workflow metadata and never employee names, KPI values, file contents, week IDs, search text, or localStorage payloads.
 - Keep import-to-storage coverage healthy for `lib/homepage/import-week.ts`, `lib/homepage/storage.ts`, and `lib/dashboard/storage.ts`: stored week creation, duplicate content hash detection, storage shape, malformed storage fallback, delete behavior, and localStorage-only guardrails.
 
@@ -96,7 +97,7 @@ If fewer than two are true, do not add it.
 
 ### Deferred
 
-- Add visual regression or Playwright coverage for the upload-to-dashboard-to-export happy path after unit tests cover the core data rules.
+- Broaden browser or visual coverage only when product risk justifies it.
 - Add storage migration tests if the `employee-kpi-dashboard:v1` schema changes.
 - Decide whether same-week/different-content imports should replace the prior stored week, merge multiple source files, or prompt the user before changing the saved record.
 - Consider removing old agent persona docs if `docs/dev-process.md` becomes the source of truth for delivery discipline.

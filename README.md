@@ -87,7 +87,7 @@ Tracked events:
 - `Dashboard Sort Changed`
 - `FLNL Export Downloaded`
 
-These events can support a promotion or raise conversation by showing dashboard adoption, successful report processing, manager review behavior, and newsletter export usage. Event properties are limited to safe workflow metadata such as upload source, report type, failure category, dashboard view mode, sort key, and export format.
+These events can show dashboard adoption, successful report processing, manager review behavior, and newsletter export usage. Event properties are limited to safe workflow metadata such as upload source, report type, failure category, dashboard view mode, sort key, and export format.
 
 ## Project Structure
 
@@ -105,12 +105,20 @@ app/
 
 ## Local Development
 
-Use the Node version from `.nvmrc` and install dependencies from the lockfile.
+Use npm with the checked-in `package-lock.json`. The runtime source of truth is `.nvmrc`, currently Node `22.14.0`; `package.json` also declares the supported engine range as Node `>=22 <23` and the expected package manager as npm `10.9.2`.
 
 ```bash
 nvm use
 npm ci
 npm run dev
+```
+
+Do not use Yarn, pnpm, or ad hoc installs for this repo. If local commands warn about an unsupported Node version, switch back to `nvm use` before reinstalling or verifying.
+
+If `nvm use` is unavailable on this machine, Homebrew Node 22 can be used explicitly:
+
+```bash
+PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run check
 ```
 
 Open the app locally:

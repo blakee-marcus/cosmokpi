@@ -13,6 +13,8 @@ const SAFE_KEYS = new Set([
   'source',
   'reason',
   'report_type',
+  'import_mode',
+  'stage',
   'view_mode',
   'sort_key',
   'export_format',
@@ -51,7 +53,14 @@ describe('analytics privacy safety', () => {
 
   it('tracks only explicit workflow metadata for allowed events', () => {
     trackImpactEvent('KPI Report Upload Started', { source: 'file_picker' });
+    trackImpactEvent('KPI Report Validated', { source: 'file_picker', report_type: 'game-guide' });
     trackImpactEvent('KPI Report Saved', { source: 'drag_drop', report_type: 'game-guide' });
+    trackImpactEvent('KPI Report Saved', {
+      source: 'drag_drop',
+      report_type: 'game-guide',
+      import_mode: 'replace',
+    });
+    trackImpactEvent('KPI Report Import Canceled', { stage: 'duplicate_preview' });
     trackImpactEvent('Dashboard View Mode Changed', { view_mode: 'monthly' });
     trackImpactEvent('Dashboard Period Changed', { view_mode: 'weekly' });
     trackImpactEvent('Dashboard Search Used', { view_mode: 'weekly' });

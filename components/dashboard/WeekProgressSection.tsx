@@ -56,24 +56,28 @@ function SummaryStat({ label, value, tone }: SummaryStatProps) {
   }[tone];
 
   return (
-    <div className='rounded-[16px] border border-cosmo-black/5 bg-cosmo-white p-3'>
-      <p className={`font-display text-2xl font-black ${toneClass}`}>{value}</p>
-      <p className='font-tag text-[11px] font-black uppercase text-ink-soft'>{label}</p>
+    <div className='rounded-[18px] border-2 border-cosmo-black/10 bg-cosmo-white p-3 shadow-[2px_3px_0_0_rgba(17,17,17,0.08)]'>
+      <p className={`font-display text-2xl font-black leading-none ${toneClass}`}>{value}</p>
+      <p className='font-tag mt-1 text-[11px] font-black uppercase text-ink-soft'>{label}</p>
     </div>
   );
 }
 
 function SummaryCard({ label, metric, fallback }: SummaryCardProps) {
   const status = metric ? getProgressStatus(metric.delta) : null;
-  const pillClass = status ? getProgressClasses(status).pill : 'bg-cosmo-white text-cosmo-black';
+  const pillClass = status ? getProgressClasses(status).pill : 'bg-comic-fog text-ink-soft';
 
   return (
-    <div className='rounded-[18px] border border-cosmo-white/10 bg-cosmo-white/10 p-4'>
-      <p className='font-tag text-xs font-black uppercase text-cosmo-white/60'>{label}</p>
-      <p className='mt-1 font-heading text-lg font-black'>{metric?.label ?? fallback}</p>
+    <div className='rounded-[22px] border-2 border-cosmo-white/15 bg-cosmo-white/10 p-4'>
+      <p className='font-tag text-xs font-black uppercase text-cosmo-white/65'>{label}</p>
+
+      <p className='mt-2 font-heading text-lg font-black leading-tight text-cosmo-white'>
+        {metric?.label ?? fallback}
+      </p>
+
       <p
-        className={`font-tag mt-2 inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${pillClass}`}>
-        {metric ? formatPointDelta(metric.delta) : '0.0 pts'}
+        className={`font-tag mt-3 inline-flex h-7 items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-black uppercase leading-none ${pillClass}`}>
+        {metric ? formatPointDelta(metric.delta) : 'No change yet'}
       </p>
     </div>
   );
@@ -84,7 +88,7 @@ function ProgressSummaryStats({ progressSummary }: ProgressSummaryStatsProps) {
     <div className='grid grid-cols-3 gap-2 text-center sm:min-w-[360px]'>
       <SummaryStat label='Improved' value={progressSummary.improvedCount} tone='green' />
       <SummaryStat label='Steady' value={progressSummary.steadyCount} tone='yellow' />
-      <SummaryStat label='Follow-up' value={progressSummary.needsFollowUpCount} tone='red' />
+      <SummaryStat label='Follow up' value={progressSummary.needsFollowUpCount} tone='red' />
     </div>
   );
 }
@@ -92,13 +96,14 @@ function ProgressSummaryStats({ progressSummary }: ProgressSummaryStatsProps) {
 function EmptyProgressState({ periodName, storeName }: { periodName: string; storeName: string }) {
   return (
     <div className='p-5'>
-      <div className='rounded-[24px] border-2 border-dashed border-cosmo-black/20 bg-cosmo-white p-6'>
+      <div className='rounded-[24px] border-2 border-dashed border-cosmo-black/30 bg-cosmo-white p-6'>
         <p className='font-heading text-xl font-black text-cosmo-black'>
-          No prior {periodName} yet
+          Save one more {periodName} to compare progress
         </p>
-        <p className='mt-2 max-w-2xl text-sm font-medium leading-6 text-ink-soft'>
-          Add another saved {periodName} for {storeName} to compare KPI movement and identify the next
-          leadership follow-up.
+
+        <p className='mt-2 max-w-2xl text-sm font-semibold leading-6 text-ink-soft'>
+          Once {storeName} has another saved {periodName}, this section will show what improved,
+          what stayed steady, and where follow-up is needed.
         </p>
       </div>
     </div>
@@ -107,67 +112,66 @@ function EmptyProgressState({ periodName, storeName }: { periodName: string; sto
 
 function ProgressTable({ metrics }: { metrics: WeekProgressMetric[] }) {
   return (
-    <div className='rounded-[24px] border-2 border-cosmo-black/10 bg-cosmo-white p-0.5'>
-      <div className='overflow-hidden rounded-[21px]'>
-        <div className='overflow-x-auto'>
-          <table className='w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm'>
-            <thead className='bg-blue font-tag text-xs uppercase text-cosmo-white'>
-              <tr>
-                <th className='px-4 py-3 font-black'>KPI</th>
-                <th className='px-4 py-3 font-black'>This week</th>
-                <th className='px-4 py-3 font-black'>Prior</th>
-                <th className='px-4 py-3 font-black'>Change</th>
-                <th className='px-4 py-3 font-black'>Goal</th>
-              </tr>
-            </thead>
+    <div className='overflow-hidden rounded-[28px] border-2 border-cosmo-black bg-cosmo-white shadow-[5px_6px_0_0_rgba(17,17,17,1)]'>
+      <div className='overflow-x-auto'>
+        <table className='w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm'>
+          <thead className='bg-primary-web-red font-tag text-xs uppercase text-cosmo-white'>
+            <tr>
+              <th className='px-4 py-4 font-black'>KPI</th>
+              <th className='px-4 py-4 font-black'>Current</th>
+              <th className='px-4 py-4 font-black'>Previous</th>
+              <th className='px-4 py-4 font-black'>Change</th>
+              <th className='px-4 py-4 font-black'>Goal</th>
+            </tr>
+          </thead>
 
-            <tbody className='bg-cosmo-white'>
-              {metrics.map((metric, index) => {
-                const status = getProgressStatus(metric.delta);
-                const classes = getProgressClasses(status);
-                const rowBorderClass = getRowBorderClass(index === metrics.length - 1);
+          <tbody className='bg-cosmo-white'>
+            {metrics.map((metric, index) => {
+              const status = getProgressStatus(metric.delta);
+              const classes = getProgressClasses(status);
+              const rowBorderClass = getRowBorderClass(index === metrics.length - 1);
 
-                return (
-                  <tr key={metric.label} className='transition-colors hover:bg-comic-fog'>
-                    <td className={`px-4 py-4 ${rowBorderClass}`}>
-                      <p className='font-heading text-base font-black text-cosmo-black'>
-                        {metric.label}
-                      </p>
-                      <p className='mt-1 text-xs font-semibold leading-5 text-ink-soft'>
-                        {metric.detail}
-                      </p>
-                    </td>
+              return (
+                <tr key={metric.label} className='transition-colors hover:bg-comic-fog'>
+                  <td className={`px-4 py-4 ${rowBorderClass}`}>
+                    <p className='font-heading text-base font-black text-cosmo-black'>
+                      {metric.label}
+                    </p>
+                    <p className='mt-1 text-xs font-semibold leading-5 text-ink-soft'>
+                      {metric.detail}
+                    </p>
+                  </td>
 
-                    <td
-                      className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
-                      {formatPercent(metric.value)}
-                    </td>
+                  <td
+                    className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
+                    {formatPercent(metric.value)}
+                  </td>
 
-                    <td
-                      className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
-                      {formatPercent(metric.previousValue)}
-                    </td>
+                  <td
+                    className={`px-4 py-4 font-display text-xl font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
+                    {formatPercent(metric.previousValue)}
+                  </td>
 
-                    <td className={`px-4 py-4 ${rowBorderClass}`}>
-                      <span
-                        className={`font-tag inline-flex h-7 items-center justify-center whitespace-nowrap rounded-[12px] px-3 text-xs font-black leading-none ${classes.pill}`}>
-                        {formatPointDelta(metric.delta)}
-                      </span>
-                      <p className='mt-2 text-xs font-black text-ink-soft'>
-                        {getProgressLabel(status)}
-                      </p>
-                    </td>
+                  <td className={`px-4 py-4 ${rowBorderClass}`}>
+                    <span
+                      className={`font-tag inline-flex h-7 items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-black uppercase leading-none ${classes.pill}`}>
+                      {formatPointDelta(metric.delta)}
+                    </span>
 
-                    <td
-                      className={`px-4 py-4 font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
-                      {formatPercent(metric.goal)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    <p className='mt-2 text-xs font-black text-ink-soft'>
+                      {getProgressLabel(status)}
+                    </p>
+                  </td>
+
+                  <td
+                    className={`px-4 py-4 font-black tabular-nums text-cosmo-black ${rowBorderClass}`}>
+                    {formatPercent(metric.goal)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -179,7 +183,7 @@ function ProgressComparisonPanel({
   progressSummary,
 }: ProgressComparisonPanelProps) {
   return (
-    <div className='grid gap-5 p-5 xl:grid-cols-[0.72fr_1.28fr]'>
+    <div className='grid gap-5 xl:grid-cols-[0.72fr_1.28fr]'>
       <aside className='relative h-full min-w-0 rounded-[28px]'>
         <div
           aria-hidden='true'
@@ -191,25 +195,26 @@ function ProgressComparisonPanel({
             Leadership read
           </p>
 
-          <p className='mt-3 font-display text-4xl font-black'>
+          <p className='mt-3 font-display text-4xl font-black leading-none'>
             {progressSummary.improvedCount} of {metrics.length}
           </p>
 
-          <p className='mt-2 text-sm font-semibold leading-6 text-cosmo-white/80'>
-            store KPIs improved compared with the prior saved {periodName}.
+          <p className='mt-3 text-sm font-semibold leading-6 text-cosmo-white/80'>
+            KPIs improved from the last saved {periodName}. Use the follow-up area below to decide
+            what needs attention next.
           </p>
 
           <div className='mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1'>
             <SummaryCard
-              label='Strongest gain'
+              label='Biggest gain'
               metric={progressSummary.strongestGain}
               fallback='No gain yet'
             />
 
             <SummaryCard
-              label='Priority follow-up'
+              label='Start here'
               metric={progressSummary.priorityFollowUp}
-              fallback='No follow-up yet'
+              fallback='No follow-up needed'
             />
           </div>
         </div>
@@ -227,7 +232,8 @@ export const WeekProgressSection = memo(function WeekProgressSection({
 }: WeekProgressSectionProps) {
   const progressSummary = previousPeriod ? getProgressSummary(metrics) : null;
   const periodName = selectedPeriod.periodType === 'monthly' ? 'month' : 'week';
-  const periodLabel = selectedPeriod.periodType === 'monthly' ? 'Month-to-month' : 'Week-to-week';
+  const comparisonLabel =
+    selectedPeriod.periodType === 'monthly' ? 'Month-to-month progress' : 'Week-to-week progress';
 
   return (
     <m.section
@@ -235,31 +241,29 @@ export const WeekProgressSection = memo(function WeekProgressSection({
       variants={panelIn}
       initial={false}
       animate='visible'
-      className='snappy-section teg-card overflow-hidden text-cosmo-black'>
-      <div className='border-b-2 border-cosmo-black/10 bg-comic-fog/70 px-5 py-6 sm:px-6 lg:px-7'>
+      className='snappy-section teg-panel overflow-hidden text-cosmo-black'>
+      <div className='border-b-2 border-cosmo-black/10 bg-comic-fog p-5 sm:p-6 lg:p-7'>
         <div className='grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end'>
           <div className='max-w-3xl'>
-            <div className='inline-flex rounded-full border-2 border-primary-web-red/15 bg-cosmo-white px-3 py-1'>
-              <p className='font-tag text-xs font-black uppercase tracking-wide text-primary-web-red'>
-                {periodLabel} progress
-              </p>
-            </div>
+            <p className='font-tag text-sm font-black uppercase text-primary-web-red'>
+              {comparisonLabel}
+            </p>
 
-            <h2 className='mt-4 font-heading text-2xl font-black leading-tight sm:text-3xl'>
+            <h2 className='mt-2 font-heading text-3xl font-black leading-tight text-cosmo-black'>
               {previousPeriod
-                ? `${selectedPeriod.periodLabel} vs ${previousPeriod.periodLabel}`
-                : `Build the next ${periodName}ly comparison`}
+                ? `${selectedPeriod.periodLabel} vs. ${previousPeriod.periodLabel}`
+                : `Progress comparison unlocks after the next ${periodName}`}
             </h2>
 
-            <p className='mt-2 text-sm font-medium leading-6 text-ink-soft sm:text-base'>
+            <p className='mt-2 text-sm font-semibold leading-6 text-ink-soft sm:text-base'>
               {previousPeriod
-                ? `Review ${selectedPeriod.storeName} movement across saved KPI reports and identify where leadership follow-through is needed next.`
-                : `Add another saved ${periodName} for ${selectedPeriod.storeName} to unlock KPI movement, trend context, and follow-up priorities.`}
+                ? `See what changed for ${selectedPeriod.storeName}, then choose the clearest next follow-up.`
+                : `Save another ${periodName} for ${selectedPeriod.storeName} to compare KPI movement and see where leadership attention is needed.`}
             </p>
           </div>
 
           {progressSummary ? (
-            <div className='rounded-[24px] border-2 border-cosmo-black/10 bg-cosmo-white p-4 shadow-[4px_5px_0_0_rgba(0,0,0,0.07)]'>
+            <div className='rounded-[24px] border-2 border-cosmo-black bg-cosmo-white p-4 shadow-[4px_5px_0_0_rgba(17,17,17,1)]'>
               <ProgressSummaryStats progressSummary={progressSummary} />
             </div>
           ) : null}
