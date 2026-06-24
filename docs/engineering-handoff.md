@@ -330,3 +330,46 @@ Known remaining risks:
 
 - Browser smoke covers the happy path with fake data and is not comprehensive visual regression coverage.
 - Node 26 still prints a `module.register()` deprecation warning in this shell; the repo runtime remains documented as Node 22.
+
+## Sprint 11 Verification
+
+Sprint 11 adds a local-only `Copy action plan` action inside the existing Recognition and Coaching section.
+
+Changed behavior:
+
+- Recognition and Coaching now has a `Copy action plan` button.
+- The copied plain text includes the store name, period label, manager notes, and a short huddle note.
+- Weekly copy uses `This Week’s Team Focus`; monthly copy uses `This Month’s Team Focus`.
+- The pure action-plan helper builds from the existing coaching view model and does not mutate it.
+- Limited-data reports produce neutral copy without saying `insufficient data`.
+- Clipboard writes happen only after the user clicks.
+- Copy success shows `Action plan copied.`
+- Clipboard failure shows `Copy failed. Select and copy the notes manually.`
+- Copied action plans are not saved to localStorage.
+
+Privacy review:
+
+- Employee KPI data remains local to the browser.
+- No auth, database, cloud sync, server storage, new services, external data calls, or saved action-plan storage was added.
+- Analytics tracks only workflow metadata for the copy action: `copy_action_plan_clicked` and dashboard view mode.
+- Analytics does not include copied text, employee names, KPI values, row data, CSV contents, search terms, week ids, localStorage payloads, report payloads, or export contents.
+- Source-level guardrail coverage checks the action-plan helper and section UI do not reference network, cookie, URL, database, localStorage, or analytics APIs.
+
+Tests added or updated:
+
+- `lib/dashboard/coaching.test.ts`: weekly copy, monthly copy, limited-data neutral copy, no mutation, and forbidden phrase avoidance.
+- `lib/analytics.test.ts`: safe workflow metadata coverage for `Leadership Action Plan Copied`.
+- `lib/homepage/local-first.test.ts`: action-plan helper/UI local-first guardrail.
+- `e2e/management-csv-smoke.spec.ts`: click-to-copy browser smoke using an in-memory clipboard probe.
+
+Verification run on June 6, 2026 with `PATH=/opt/homebrew/opt/node@22/bin:$PATH`:
+
+- `npm run test`: passed, 12 files and 64 tests.
+- `npm run check`: passed, including lint, typecheck, and production build.
+- `npm run test:browser`: passed, 1 Chromium smoke. The shell still emitted the known `NO_COLOR`/`FORCE_COLOR` warning during Playwright output.
+
+Known remaining risks:
+
+- Browser smoke verifies the copy interaction and status with fake data, but it is not comprehensive visual regression coverage.
+- Clipboard availability can vary by browser permission and context; failure is handled visibly, but the app does not provide a separate manual text box.
+- Copy selection is deterministic from current coaching signals; future product work may let managers choose the focus manually.

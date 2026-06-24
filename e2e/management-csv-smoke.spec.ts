@@ -10,6 +10,18 @@ const fakeManagementFileName = 'fake-management-week-2026-05-11.csv';
 const fakeManagementCsvText = readFileSync(fakeManagementCsv, 'utf8');
 
 test('imports fake management CSV and exercises dashboard review paths', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (text: string) => {
+          (window as Window & { __clipboardProbe?: string }).__clipboardProbe = text;
+          return Promise.resolve();
+        },
+      },
+    });
+  });
+
   await page.goto('/');
   await page.evaluate(() => window.localStorage.clear());
   await expect(page.getByText('Waiting for CSV')).toBeVisible();
@@ -43,6 +55,15 @@ test('imports fake management CSV and exercises dashboard review paths', async (
   await expect(page.getByText('Training Store North weekly dashboard')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Team performance table' })).toBeVisible();
   await expect(page.getByRole('row', { name: /Alex Arcade/ })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Copy action plan' }).click();
+  await expect(page.getByText('Action plan copied.')).toBeVisible();
+  const copiedActionPlan = await page.evaluate(
+    () => (window as Window & { __clipboardProbe?: string }).__clipboardProbe,
+  );
+  expect(copiedActionPlan).toContain('This Week’s Team Focus — Training Store North');
+  expect(copiedActionPlan).toContain('Huddle note:');
+  expect(copiedActionPlan).not.toContain('Selected period');
 
   await page.getByRole('button', { name: 'Sort team member table' }).click();
   await page.getByRole('option', { name: 'Preview ask rate' }).click();

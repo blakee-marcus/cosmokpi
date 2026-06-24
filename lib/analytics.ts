@@ -54,6 +54,10 @@ type ImpactEventProperties = {
     export_format: 'png';
     view_mode: DashboardViewMode;
   };
+  'Leadership Action Plan Copied': {
+    action: 'copy_action_plan_clicked';
+    view_mode: DashboardViewMode;
+  };
 };
 
 export type ImpactEventName = keyof ImpactEventProperties;

@@ -13,7 +13,10 @@ import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { WeekProgressSection } from '@/components/dashboard/WeekProgressSection';
 import { trackImpactEvent } from '@/lib/analytics';
 import { getEmployeeComparisonKey } from '@/lib/dashboard/comparison';
-import { buildPerformanceCoachingViewModel } from '@/lib/dashboard/coaching';
+import {
+  buildLeadershipActionPlanText,
+  buildPerformanceCoachingViewModel,
+} from '@/lib/dashboard/coaching';
 import { EMPTY_STORAGE } from '@/lib/dashboard/constants';
 import {
   buildDashboardMetrics,
@@ -151,6 +154,12 @@ export default function DashboardPage() {
     });
   }, [previousPeriod, selectedPeriod]);
 
+  const actionPlanText = useMemo(() => {
+    if (!performanceCoachingView) return '';
+
+    return buildLeadershipActionPlanText(performanceCoachingView);
+  }, [performanceCoachingView]);
+
   const resetTableControls = useCallback(() => {
     setSearchTerm('');
     setSortKey(DEFAULT_SORT_KEY);
@@ -240,6 +249,22 @@ export default function DashboardPage() {
     });
   }, [selectedWeek, viewMode]);
 
+  const handleCopyActionPlan = useCallback(
+    async (text: string) => {
+      trackImpactEvent('Leadership Action Plan Copied', {
+        action: 'copy_action_plan_clicked',
+        view_mode: viewMode,
+      });
+
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API is unavailable.');
+      }
+
+      await navigator.clipboard.writeText(text);
+    },
+    [viewMode],
+  );
+
   if (!selectedWeek || !selectedPeriod || !selectedPeriodOption) {
     return <EmptyDashboardState />;
   }
@@ -283,7 +308,11 @@ export default function DashboardPage() {
             />
 
             {performanceCoachingView ? (
-              <PerformanceCoachingSection coachingView={performanceCoachingView} />
+              <PerformanceCoachingSection
+                actionPlanText={actionPlanText}
+                coachingView={performanceCoachingView}
+                onCopyActionPlan={handleCopyActionPlan}
+              />
             ) : null}
 
             <EmployeeKpiTable

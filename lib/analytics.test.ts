@@ -18,6 +18,7 @@ const SAFE_KEYS = new Set([
   'view_mode',
   'sort_key',
   'export_format',
+  'action',
 ]);
 
 const SENSITIVE_KEYS = [
@@ -69,6 +70,10 @@ describe('analytics privacy safety', () => {
       view_mode: 'monthly',
     });
     trackImpactEvent('FLNL Export Downloaded', { export_format: 'png', view_mode: 'monthly' });
+    trackImpactEvent('Leadership Action Plan Copied', {
+      action: 'copy_action_plan_clicked',
+      view_mode: 'weekly',
+    });
 
     for (const properties of trackedProperties()) {
       expect(Object.keys(properties).every((key) => SAFE_KEYS.has(key))).toBe(true);

@@ -1,5 +1,6 @@
 import * as m from 'motion/react-m';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 import { formatPercent, formatPointDelta } from '@/lib/dashboard/formatters';
 import type {
@@ -11,7 +12,9 @@ import type {
 import { listContainer, listItem } from '@/lib/motion';
 
 type PerformanceCoachingSectionProps = Readonly<{
+  actionPlanText: string;
   coachingView: PerformanceCoachingViewModel;
+  onCopyActionPlan: (text: string) => Promise<void>;
 }>;
 
 type InsightCardProps = Readonly<{
@@ -131,24 +134,61 @@ function MostImprovedCard({ insight }: { insight: MostImprovedInsight }) {
   );
 }
 
-export function PerformanceCoachingSection({ coachingView }: PerformanceCoachingSectionProps) {
+export function PerformanceCoachingSection({
+  actionPlanText,
+  coachingView,
+  onCopyActionPlan,
+}: PerformanceCoachingSectionProps) {
   const priorPeriodLabel = coachingView.periodType === 'monthly' ? 'month' : 'week';
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  async function handleCopyActionPlan() {
+    setCopyStatus('idle');
+
+    try {
+      await onCopyActionPlan(actionPlanText);
+      setCopyStatus('success');
+    } catch {
+      setCopyStatus('error');
+    }
+  }
 
   return (
     <m.section layout className='snappy-section teg-panel overflow-hidden text-cosmo-black'>
       <div className='border-b-2 border-cosmo-black/10 bg-comic-fog p-5'>
-        <p className='font-tag text-sm font-black uppercase text-primary-web-red'>
-          Leadership focus
-        </p>
+        <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+          <div>
+            <p className='font-tag text-sm font-black uppercase text-primary-web-red'>
+              Leadership focus
+            </p>
 
-        <h2 className='mt-2 font-heading text-3xl font-black leading-tight text-cosmo-black'>
-          Recognition and coaching
-        </h2>
+            <h2 className='mt-2 font-heading text-3xl font-black leading-tight text-cosmo-black'>
+              Recognition and coaching
+            </h2>
 
-        <p className='mt-2 max-w-3xl text-sm font-semibold leading-6 text-ink-soft'>
-          Use this view to choose who to celebrate, who to follow up with, and which behaviors need
-          attention next.
-        </p>
+            <p className='mt-2 max-w-3xl text-sm font-semibold leading-6 text-ink-soft'>
+              Use this view to choose who to celebrate, who to follow up with, and which behaviors
+              need attention next.
+            </p>
+          </div>
+
+          <div className='flex shrink-0 flex-col items-start gap-2 lg:items-end'>
+            <button
+              type='button'
+              onClick={handleCopyActionPlan}
+              className='font-tag inline-flex min-h-11 items-center justify-center rounded-full border-2 border-cosmo-black bg-primary-web-red px-4 text-xs font-black uppercase text-cosmo-white shadow-[3px_4px_0_0_rgba(17,17,17,1)] transition hover:-translate-y-0.5 hover:shadow-[4px_5px_0_0_rgba(17,17,17,1)] focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cosmo-yellow'>
+              Copy action plan
+            </button>
+
+            <p aria-live='polite' className='min-h-5 text-sm font-bold text-ink-soft'>
+              {copyStatus === 'success'
+                ? 'Action plan copied.'
+                : copyStatus === 'error'
+                  ? 'Copy failed. Select and copy the notes manually.'
+                  : ''}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className='space-y-6 p-5'>
