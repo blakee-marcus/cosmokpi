@@ -9,6 +9,7 @@ import {
   normalizePercent,
   slugify,
 } from './formatters';
+import { getStoreKpiRates } from './metrics';
 import { getNewsletterRows } from './metrics';
 import type { StoredWeek } from './types';
 
@@ -205,6 +206,51 @@ import { isManagementRole } from './roles';
 
 export { isManagementRole };
 
+export type ExportSummaryData = Readonly<{
+  biggestWin: { label: string; detail: string };
+  biggestFocus: { label: string; detail: string };
+  totalGames: number;
+  totalGuests: number;
+}>;
+
+export function getSummaryData(week: StoredWeek): ExportSummaryData {
+  const rows = getFrontlineNewsletterRows(week);
+  const totals = week.totals;
+  const rates = getStoreKpiRates({ totals });
+
+  // Find biggest win: best performing metric relative to goal
+  const metrics: { key: string; label: string; value: number; goal: number }[] = [
+    { key: 'replay', label: 'Replay', value: rates.replayPercent, goal: KPI_GOALS.replayPercent },
+    { key: 'review', label: 'Review Ask', value: rates.reviewsAskedPercent, goal: KPI_GOALS.reviewsAskedPercent },
+    { key: 'preview', label: 'Preview', value: rates.previewsPercent, goal: KPI_GOALS.previewsPercent },
+  ];
+
+  // Biggest win: highest percentage of goal achieved
+  const biggestWinMetric = [...metrics]
+    .filter((m) => m.value > 0)
+    .sort((a, b) => (b.value / b.goal) - (a.value / a.goal))[0];
+
+  const biggestWin = biggestWinMetric
+    ? { label: biggestWinMetric.label, detail: `${formatNewsletterPercent(biggestWinMetric.value)} of goal` }
+    : { label: 'N/A', detail: 'No data' };
+
+  // Biggest focus: lowest percentage of goal achieved
+  const biggestFocusMetric = [...metrics]
+    .filter((m) => m.value < m.goal)
+    .sort((a, b) => (a.value / a.goal) - (b.value / b.goal))[0];
+
+  const biggestFocus = biggestFocusMetric
+    ? { label: biggestFocusMetric.label, detail: `${formatNewsletterPercent(biggestFocusMetric.value)} vs ${formatNewsletterPercent(biggestFocusMetric.goal)} goal` }
+    : { label: 'All on track', detail: 'Every KPI at or above goal' };
+
+  return {
+    biggestWin,
+    biggestFocus,
+    totalGames: totals.totalGames,
+    totalGuests: totals.guests,
+  };
+}
+
 export function getFrontlineNewsletterRows(week: StoredWeek) {
   return getNewsletterRows(week).filter((employee) => !isManagementRole(employee.role));
 }
@@ -397,8 +443,70 @@ function drawEmployeeRow(
   });
 }
 
+function drawSummaryCards(
+  context: CanvasRenderingContext2D,
+  summary: ExportSummaryData,
+  x: number,
+  y: number,
+  width: number,
+) {
+  const cardGap = 12;
+  const cardCount = 4;
+  const cardWidth = (width - (cardCount - 1) * cardGap) / cardCount;
+  const cardHeight = 100;
+  const cardRadius = 18;
+
+  const cards = [
+    { icon: '\u2713', accent: brand.green, label: 'BIGGEST WIN', value: summary.biggestWin.label, detail: summary.biggestWin.detail },
+    { icon: '!', accent: brand.red, label: 'BIGGEST FOCUS', value: summary.biggestFocus.label, detail: summary.biggestFocus.detail },
+    { icon: '\u2691', accent: brand.blue, label: 'GAMES HOSTED', value: formatNumber(summary.totalGames), detail: 'this report' },
+    { icon: '\u2606', accent: brand.warning, label: 'GUESTS SERVED', value: formatNumber(summary.totalGuests), detail: 'this report' },
+  ];
+
+  cards.forEach((card, index) => {
+    const cardX = x + index * (cardWidth + cardGap);
+
+    // Card background
+    fillRoundedRect(context, cardX, y, cardWidth, cardHeight, cardRadius, brand.surface);
+    strokeRoundedRect(context, cardX, y, cardWidth, cardHeight, cardRadius, brand.line, 1.5);
+
+    // Accent top bar
+    const barHeight = 6;
+    context.save();
+    drawRoundedRect(context, cardX, y, cardWidth, barHeight + cardRadius, cardRadius);
+    context.clip();
+    context.fillStyle = card.accent;
+    context.fillRect(cardX, y, cardWidth, barHeight + cardRadius);
+    context.restore();
+
+    // Label (uppercase small)
+    context.fillStyle = brand.muted;
+    context.font = `800 11px ${font.body}`;
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    context.fillText(card.label, cardX + 14, y + 16, cardWidth - 28);
+
+    // Value (large)
+    context.fillStyle = brand.black;
+    context.font = `900 26px ${font.heading}`;
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    context.fillText(card.value, cardX + 14, y + 36, cardWidth - 28);
+
+    // Detail (small)
+    context.fillStyle = brand.muted;
+    context.font = `700 12px ${font.body}`;
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    context.fillText(card.detail, cardX + 14, y + 70, cardWidth - 28);
+  });
+
+  return cardHeight;
+}
+
 function createNewsletterKpiCanvas(week: StoredWeek) {
   const { rows } = prepareNewsletterExport(week);
+  const summary = getSummaryData(week);
 
   const pagePadding = 46;
   const cardPadding = 30;
@@ -407,6 +515,7 @@ function createNewsletterKpiCanvas(week: StoredWeek) {
 
   const headerBlockHeight = 150;
   const goalStripHeight = 54;
+  const summaryCardsHeight = 100;
   const tableHeaderHeight = 50;
   const rowHeight = 56;
   const tableRowsHeight = Math.max(rows.length, 1) * rowHeight;
@@ -415,7 +524,7 @@ function createNewsletterKpiCanvas(week: StoredWeek) {
 
   const cardWidth = tableWidth + cardPadding * 2;
   const cardHeight =
-    cardPadding * 2 + headerBlockHeight + verticalGap + goalStripHeight + verticalGap + tableHeight;
+    cardPadding * 2 + headerBlockHeight + verticalGap + goalStripHeight + verticalGap + summaryCardsHeight + verticalGap + tableHeight;
 
   const width = cardWidth + pagePadding * 2;
   const height = cardHeight + pagePadding * 2;
@@ -448,6 +557,9 @@ function createNewsletterKpiCanvas(week: StoredWeek) {
 
   drawGoalStrip(context, contentX, currentY, tableWidth, goalStripHeight);
   currentY += goalStripHeight + verticalGap;
+
+  drawSummaryCards(context, summary, contentX, currentY, tableWidth);
+  currentY += summaryCardsHeight + verticalGap;
 
   const tableX = contentX;
   const tableY = currentY;

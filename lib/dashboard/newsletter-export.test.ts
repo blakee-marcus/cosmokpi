@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getExportStoreLabel,
   getFrontlineNewsletterRows,
+  getSummaryData,
   isManagementRole,
   prepareNewsletterExport,
 } from './newsletter-export';
@@ -101,5 +102,21 @@ describe('Frontline Newsletter export prep', () => {
       weekStart: '2026-05-04',
     });
     expect(exportPrep.rows.map((row) => row.name)).toEqual(['Alex Guide']);
+  });
+
+  it('computes summary data with biggest win and focus from team rates', () => {
+    const summary = getSummaryData(
+      week({
+        employees: [
+          employee({ name: 'Alex Guide', totalGames: 10, guests: 30, replaysSoldPercent: 20, reviewsAskedPercent: 95, previewsPercent: 85 }),
+          employee({ name: 'Casey Guide', totalGames: 8, guests: 20, replaysSoldPercent: 15, reviewsAskedPercent: 80, previewsPercent: 60 }),
+        ],
+      }),
+    );
+
+    expect(summary.totalGames).toBe(18);
+    expect(summary.totalGuests).toBe(50);
+    expect(summary.biggestWin.label).toBeTruthy();
+    expect(summary.biggestFocus.label).toBeTruthy();
   });
 });
