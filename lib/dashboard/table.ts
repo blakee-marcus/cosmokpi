@@ -1,3 +1,4 @@
+import { isManagementRole } from './roles';
 import { MINIMUM_GAMES_FOR_RANKING } from './constants';
 import { normalizePercent } from './formatters';
 import type { EmployeeKpiRow, SortKey } from './types';
@@ -22,7 +23,11 @@ export function getSortValue(employee: EmployeeKpiRow, sortKey: SortKey) {
 
 export function rankEmployees(employees: EmployeeKpiRow[], sortKey: SortKey) {
   return [...employees]
-    .filter((employee) => Number(employee.totalGames) >= MINIMUM_GAMES_FOR_RANKING)
+    .filter(
+      (employee) =>
+        Number(employee.totalGames) >= MINIMUM_GAMES_FOR_RANKING &&
+        !isManagementRole(employee.role),
+    )
     .sort((a, b) => {
       if (sortKey === 'name') {
         return compareEmployeeIdentity(a, b);

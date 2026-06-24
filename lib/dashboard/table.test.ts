@@ -61,6 +61,23 @@ describe('dashboard table helpers', () => {
     }),
   ];
 
+  const employeesWithManager = [
+    ...employees,
+    employee({
+      name: 'Sam Manager',
+      role: 'Management',
+      totalGames: 15,
+      guests: 40,
+      replaysSoldPercent: 25,
+      reviewsAskedPercent: 95,
+    }),
+  ];
+
+  it('excludes management from ranked employees', () => {
+    const ranked = rankEmployees(employeesWithManager, 'replaysSoldPercent');
+    expect(ranked.map((row) => row.name)).not.toContain('Sam Manager');
+  });
+
   it('normalizes percentage sort values without changing count values', () => {
     expect(getSortValue(employees[0], 'replaysSoldPercent')).toBe(20);
     expect(getSortValue(employees[0], 'totalGames')).toBe(8);

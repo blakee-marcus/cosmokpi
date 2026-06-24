@@ -1,11 +1,8 @@
 import { getEmployeeComparisonKey } from './comparison';
 import { KPI_GOALS, MINIMUM_GAMES_FOR_RANKING, STEADY_DELTA_THRESHOLD } from './constants';
 import { formatNumber, formatPercent, formatPointDelta, normalizePercent } from './formatters';
-import type {
-  DashboardPeriod,
-  EmployeeKpiRow,
-  EmployeePercentMetricKey,
-} from './types';
+import { isManagementRole } from './roles';
+import type { DashboardPeriod, EmployeeKpiRow, EmployeePercentMetricKey } from './types';
 
 export type TrendState =
   | 'up'
@@ -77,6 +74,7 @@ export type PerformanceCoachingViewModel = Readonly<{
   hasEnoughData: boolean;
   periodType: DashboardPeriod['periodType'];
   periodLabel: string;
+  storeName: string;
   topPerformers: TopPerformerInsight[];
   mostImproved: MostImprovedInsight[];
   coachingOpportunities: CoachingOpportunity[];
@@ -133,7 +131,11 @@ const COUNT_METRICS: CoachingMetric[] = [
 ];
 
 function getEligibleEmployees(employees: EmployeeKpiRow[]) {
-  return employees.filter((employee) => Number(employee.totalGames) >= MINIMUM_GAMES_FOR_RANKING);
+  return employees.filter(
+    (employee) =>
+      Number(employee.totalGames) >= MINIMUM_GAMES_FOR_RANKING &&
+      !isManagementRole(employee.role),
+  );
 }
 
 function getMetricValue(employee: EmployeeKpiRow, metric: CoachingMetric) {
@@ -170,6 +172,110 @@ function compareByMetricDesc(metric: CoachingMetric) {
 
     return compareIdentity(a, b);
   };
+}
+
+function getActionPlanTitle(coachingView: PerformanceCoachingViewModel) {
+  const periodName = coachingView.periodType === 'monthly' ? 'Month' : 'Week';
+  const storeName = coachingView.storeName.trim();
+
+  return storeName
+    ? `This ${periodName}’s Team Focus — ${storeName}`
+    : `This ${periodName}’s Team Focus`;
+}
+
+function getFocusNoun(focus: CoachingFocus) {
+  switch (focus) {
+    case 'Replay conversion':
+      return 'replay conversion';
+    case 'Preview asks':
+      return 'preview asks';
+    case 'Shared replay':
+      return 'shared replay';
+    case 'Game volume consistency':
+      return 'steady game follow-through';
+    case 'Guest volume':
+      return 'guest service follow-through';
+    case 'Review asks':
+    default:
+      return 'review asks';
+  }
+}
+
+function getFocusBehavior(focus: CoachingFocus) {
+  switch (focus) {
+    case 'Replay conversion':
+      return 'Keep replay offers clear and connected to the guest experience.';
+    case 'Preview asks':
+      return 'invite each group to check out another open room while the excitement from their game is still fresh';
+    case 'Shared replay':
+      return 'Make shared replay part of the team’s game wrap-up rhythm.';
+    case 'Game volume consistency':
+      return 'Keep each handoff tight so games start smoothly and on time.';
+    case 'Guest volume':
+      return 'Keep service warm and ready as each group moves through the store.';
+    case 'Review asks':
+    default:
+      return 'Keep review asks simple and consistent during each game.';
+  }
+}
+
+function getSimpleAction(focus: CoachingFocus) {
+  switch (focus) {
+    case 'Replay conversion':
+      return 'connect each replay offer to the moment guests just enjoyed';
+    case 'Preview asks':
+      return 'invite each group to check out another open room while the excitement from their game is still fresh';
+    case 'Shared replay':
+      return 'mention shared replay during the game wrap-up';
+    case 'Game volume consistency':
+      return 'finish each handoff clearly so the next game starts clean';
+    case 'Guest volume':
+      return 'stay ready for each group and keep service moving';
+    case 'Review asks':
+    default:
+      return 'ask every group while the service moment is still fresh';
+  }
+}
+
+function getPrimaryWin(coachingView: PerformanceCoachingViewModel) {
+  const topPerformer = coachingView.topPerformers[0];
+
+  if (topPerformer) {
+    return {
+      managerNote: `${topPerformer.name} led ${topPerformer.strengthLabel} with ${topPerformer.supportingEvidence}.`,
+      huddleWin: `${topPerformer.name} leading ${topPerformer.strengthLabel}`,
+    };
+  }
+
+  const mostImproved = coachingView.mostImproved[0];
+
+  if (mostImproved) {
+    return {
+      managerNote: `${mostImproved.name} made progress on ${mostImproved.improvedMetric}.`,
+      huddleWin: `${mostImproved.name} making progress on ${mostImproved.improvedMetric}`,
+    };
+  }
+
+  return {
+    managerNote: 'We have a new report saved and ready to review.',
+    huddleWin: 'the work you’re putting in',
+  };
+}
+
+function getPrimaryFollowUp(coachingView: PerformanceCoachingViewModel) {
+  const attentionItem = coachingView.needsCoachingAttention.items[0];
+
+  if (!attentionItem) return 'No individual follow-up is clear yet.';
+
+  return `Check in privately with ${attentionItem.name} on ${attentionItem.metricArea}.`;
+}
+
+function getPrimaryFocus(coachingView: PerformanceCoachingViewModel): CoachingFocus {
+  return (
+    coachingView.needsCoachingAttention.items[0]?.metricArea ??
+    coachingView.coachingOpportunities[0]?.coachingFocus ??
+    'Review asks'
+  );
 }
 
 function buildPreviousEmployeeMap(previousPeriod: DashboardPeriod | null) {
@@ -301,7 +407,9 @@ export function getTopPerformerInsights(
             })
           : getTrendDirection({
               currentValue: getMetricValue(leader, metric),
-              previousValue: previousEmployee ? getMetricValue(previousEmployee, metric) : undefined,
+              previousValue: previousEmployee
+                ? getMetricValue(previousEmployee, metric)
+                : undefined,
               hasPreviousPeriod: Boolean(previousPeriod),
             });
 
@@ -360,9 +468,7 @@ export function getMostImprovedInsights(
         games: Number(employee.totalGames),
       };
     })
-    .filter(
-      (insight): insight is MostImprovedInsight & { games: number } => Boolean(insight),
-    )
+    .filter((insight): insight is MostImprovedInsight & { games: number } => Boolean(insight))
     .sort((a, b) => {
       const deltaComparison = b.delta - a.delta;
       if (deltaComparison !== 0) return deltaComparison;
@@ -486,6 +592,7 @@ export function buildPerformanceCoachingViewModel({
     hasEnoughData,
     periodType: selectedPeriod.periodType,
     periodLabel: selectedPeriod.periodLabel,
+    storeName: selectedPeriod.storeName,
     topPerformers: hasEnoughData ? getTopPerformerInsights(selectedPeriod, previousPeriod) : [],
     mostImproved: hasEnoughData ? getMostImprovedInsights(selectedPeriod, previousPeriod) : [],
     coachingOpportunities: hasEnoughData ? getCoachingOpportunities(selectedPeriod) : [],
@@ -499,4 +606,37 @@ export function buildPerformanceCoachingViewModel({
       ? null
       : `Add team members with at least ${MINIMUM_GAMES_FOR_RANKING} games before using performance views.`,
   };
+}
+
+export function buildLeadershipActionPlanText(coachingView: PerformanceCoachingViewModel) {
+  const title = getActionPlanTitle(coachingView);
+  const periodLabel = coachingView.periodLabel.trim();
+  const periodLine = periodLabel ? `${periodLabel}\n\n` : '';
+  const periodNoun = coachingView.periodType === 'monthly' ? 'month' : 'week';
+
+  if (!coachingView.hasEnoughData) {
+    return `${title}
+${periodLine}Manager notes:
+- Celebrate: We have a new report saved and ready to review.
+- Follow up: No individual follow-up is clear yet.
+- Team focus: Choose one clear behavior to reinforce this ${periodNoun}.
+
+Huddle note:
+Team, thank you for the work you’re putting in. This ${periodNoun}, we’re going to choose one clear focus, keep it simple, and follow through together.`;
+  }
+
+  const win = getPrimaryWin(coachingView);
+  const focus = getPrimaryFocus(coachingView);
+  const focusNoun = getFocusNoun(focus);
+
+  return `${title}
+${periodLine}Manager notes:
+- Celebrate: ${win.managerNote}
+- Follow up: ${getPrimaryFollowUp(coachingView)}
+- Team focus: ${getFocusBehavior(focus)}
+
+Huddle note:
+Team, great work on ${win.huddleWin}. This ${periodNoun}, our focus is ${focusNoun}. Let’s keep it simple: ${getSimpleAction(
+    focus,
+  )}. Thank you for continuing to take care of our guests and each other.`;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildLeadershipActionPlanText,
   buildPerformanceCoachingViewModel,
   getCoachingOpportunities,
   getEmployeeTrendSummary,
@@ -60,6 +61,28 @@ function week(overrides: Partial<StoredWeek>): StoredWeek {
 }
 
 describe('performance coaching helpers', () => {
+  const forbiddenActionPlanPhrases = [
+    'Based on the data',
+    'The dashboard indicates',
+    'The KPI results suggest',
+    'Selected period',
+    'Performance coaching view',
+    'Needs-attention signal',
+    'Actionability',
+    'Manager-ready recap',
+    'Insight',
+    'Leverage this',
+    'Utilize',
+    'Drive performance',
+    'Stakeholders',
+    'Opportunity area detected',
+    'Insufficient data',
+    'CosmoKPI Action Plan',
+    'Performance Coaching View',
+    'Insight Summary',
+    'Data-Driven Recommendation',
+  ];
+
   function expectNoGuidanceFields(value: unknown) {
     const forbiddenTerm = 'act' + 'ion';
     const forbiddenPrefix = 'sug' + 'gested';
@@ -291,5 +314,211 @@ describe('performance coaching helpers', () => {
         previousPeriod: previousMonthly,
       }).periodType,
     ).toBe('monthly');
+  });
+
+  it('builds weekly huddle-ready action plan copy from the coaching view model', () => {
+    const current = buildWeeklyPeriod(
+      week({
+        weekLabel: 'Week of May 11',
+        storeName: 'Training Store North',
+        employees: [
+          employee({
+            name: 'Alex Arcade',
+            storeName: 'Training Store North',
+            guests: 45,
+            replaysSoldPercent: 32,
+            reviewsAskedPercent: 96,
+            totalGames: 14,
+          }),
+          employee({
+            name: 'Blair Beacon',
+            storeName: 'Training Store North',
+            reviewsAskedPercent: 48,
+            previewsPercent: 50,
+            totalGames: 12,
+          }),
+          employee({
+            name: 'Casey Quest',
+            storeName: 'Training Store North',
+            reviewsAskedPercent: 82,
+            previewsPercent: 90,
+            totalGames: 11,
+          }),
+          employee({
+            name: 'Drew Replay',
+            storeName: 'Training Store North',
+            replaysSoldPercent: 18,
+            reviewsAskedPercent: 88,
+            totalGames: 10,
+          }),
+        ],
+      }),
+    );
+    const view = buildPerformanceCoachingViewModel({
+      selectedPeriod: current,
+      previousPeriod: null,
+    });
+
+    const copy = buildLeadershipActionPlanText(view);
+
+    expect(copy).toContain('This Week’s Team Focus — Training Store North');
+    expect(copy).toContain('Week of May 11');
+    expect(copy).toContain('Manager notes:');
+    expect(copy).toContain('- Celebrate: Alex Arcade led Replay conversion with 32.0% from 45 guests.');
+    expect(copy).toContain('- Follow up: Check in privately with Blair Beacon on Review asks.');
+    expect(copy).toContain('- Team focus: Keep review asks simple and consistent during each game.');
+    expect(copy).toContain(
+      'Team, great work on Alex Arcade leading Replay conversion. This week, our focus is review asks. Let’s keep it simple: ask every group while the service moment is still fresh.',
+    );
+  });
+
+  it('builds monthly action plan copy with monthly wording', () => {
+    const april = week({
+      id: 'april',
+      weekStart: '2026-04-06',
+      weekLabel: 'Apr 6',
+      storeName: 'Training Store North',
+      employees: [employee({ name: 'Alex Arcade', storeName: 'Training Store North' })],
+    });
+    const mayOne = week({
+      id: 'may-1',
+      weekStart: '2026-05-04',
+      weekLabel: 'May 4',
+      storeName: 'Training Store North',
+      employees: [
+        employee({
+          name: 'Alex Arcade',
+          storeName: 'Training Store North',
+          reviewsAskedPercent: 92,
+          totalGames: 20,
+        }),
+      ],
+    });
+    const mayTwo = week({
+      id: 'may-2',
+      weekStart: '2026-05-11',
+      weekLabel: 'May 11',
+      storeName: 'Training Store North',
+      employees: [
+        employee({
+          name: 'Blair Beacon',
+          storeName: 'Training Store North',
+          replaysSoldPercent: 28,
+          guests: 70,
+          totalGames: 22,
+        }),
+      ],
+    });
+    const monthly = buildMonthlyPeriod([april, mayOne, mayTwo], mayTwo);
+
+    expect(monthly).not.toBeNull();
+
+    const copy = buildLeadershipActionPlanText(
+      buildPerformanceCoachingViewModel({
+        selectedPeriod: monthly!,
+        previousPeriod: null,
+      }),
+    );
+
+    expect(copy).toContain('This Month’s Team Focus — Training Store North');
+    expect(copy).toContain('May 2026');
+    expect(copy).toContain('This month, our focus is');
+    expect(copy).not.toContain('This week, our focus is');
+  });
+
+  it('uses neutral limited-data copy without saying insufficient data', () => {
+    const view = buildPerformanceCoachingViewModel({
+      selectedPeriod: buildWeeklyPeriod(
+        week({
+          weekLabel: 'Week of May 18',
+          storeName: 'Training Store North',
+          employees: [employee({ name: 'Alex Arcade', totalGames: 2 })],
+        }),
+      ),
+      previousPeriod: null,
+    });
+
+    const copy = buildLeadershipActionPlanText(view);
+
+    expect(copy).toBe(`This Week’s Team Focus — Training Store North
+Week of May 18
+
+Manager notes:
+- Celebrate: We have a new report saved and ready to review.
+- Follow up: No individual follow-up is clear yet.
+- Team focus: Choose one clear behavior to reinforce this week.
+
+Huddle note:
+Team, thank you for the work you’re putting in. This week, we’re going to choose one clear focus, keep it simple, and follow through together.`);
+    expect(copy.toLowerCase()).not.toContain('insufficient data');
+  });
+
+  it('does not mutate the coaching view model when building action plan copy', () => {
+    const view = buildPerformanceCoachingViewModel({
+      selectedPeriod: buildWeeklyPeriod(
+        week({
+          storeName: 'Training Store North',
+          employees: [
+            employee({ name: 'Alex Arcade', storeName: 'Training Store North' }),
+            employee({ name: 'Blair Beacon', storeName: 'Training Store North' }),
+            employee({ name: 'Casey Quest', storeName: 'Training Store North' }),
+            employee({ name: 'Drew Replay', storeName: 'Training Store North' }),
+          ],
+        }),
+      ),
+      previousPeriod: null,
+    });
+    const before = structuredClone(view);
+
+    buildLeadershipActionPlanText(view);
+
+    expect(view).toEqual(before);
+  });
+
+  it('avoids forbidden action plan phrases where practical', () => {
+    const view = buildPerformanceCoachingViewModel({
+      selectedPeriod: buildWeeklyPeriod(
+        week({
+          storeName: 'Training Store North',
+          employees: [
+            employee({ name: 'Alex Arcade', storeName: 'Training Store North' }),
+            employee({ name: 'Blair Beacon', storeName: 'Training Store North' }),
+            employee({ name: 'Casey Quest', storeName: 'Training Store North' }),
+            employee({ name: 'Drew Replay', storeName: 'Training Store North' }),
+          ],
+        }),
+      ),
+      previousPeriod: null,
+    });
+    const copy = buildLeadershipActionPlanText(view);
+
+    for (const phrase of forbiddenActionPlanPhrases) {
+      expect(copy.toLowerCase()).not.toContain(phrase.toLowerCase());
+    }
+  });
+
+  it('excludes management from coaching insights', () => {
+    const managersAndFrontline = week({
+      employees: [
+        employee({ name: 'Casey Guide', role: 'GG', totalGames: 12, replaysSoldPercent: 25, reviewsAskedPercent: 95 }),
+        employee({ name: 'Alex Host', role: 'GG', totalGames: 10, replaysSoldPercent: 20, reviewsAskedPercent: 80 }),
+        employee({ name: 'Sam Manager', role: 'Management', totalGames: 15, replaysSoldPercent: 30, reviewsAskedPercent: 100 }),
+      ],
+    });
+    const period = buildWeeklyPeriod(managersAndFrontline);
+    const topPerformers = getTopPerformerInsights(period, null);
+    const improved = getMostImprovedInsights(period, null);
+    const opportunities = getCoachingOpportunities(period);
+    const attention = getNeedsCoachingAttention(period);
+
+    const allNames = [
+      ...topPerformers.map((i) => i.name),
+      ...improved.map((i) => i.name),
+      ...opportunities.flatMap((o) => o.teamMembers),
+      ...attention.items.map((i) => i.name),
+    ];
+
+    expect(allNames).not.toContain('Sam Manager');
+    expect(topPerformers.length).toBeGreaterThan(0);
   });
 });

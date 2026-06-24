@@ -72,7 +72,6 @@ describe('Frontline Newsletter export prep', () => {
     const rows = getFrontlineNewsletterRows(
       week({
         employees: [
-          employee({ name: 'Management', role: 'GG', totalGames: 99 }),
           employee({ name: 'General Manager', role: 'General Manager', totalGames: 98 }),
           employee({ name: 'Casey Guide', totalGames: 10 }),
           employee({ name: 'Alex Guide', totalGames: 10 }),

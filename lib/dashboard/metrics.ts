@@ -1,6 +1,7 @@
 import { EMPLOYEE_PROGRESS_METRICS, KPI_GOALS, STEADY_DELTA_THRESHOLD } from './constants';
 import { getEmployeeComparisonKey, getStoreComparisonKey } from './comparison';
 import { formatPointDelta, normalizePercent, safePercent } from './formatters';
+import { isManagementRole } from './roles';
 import type {
   DashboardPeriod,
   EmployeeKpiRow,
@@ -288,13 +289,7 @@ export function getNewsletterCellColor(value: number, goal: number) {
 
 export function getNewsletterRows(week: StoredWeek) {
   return week.employees
-    .filter((employee) => {
-      const name = String(employee.name ?? '')
-        .trim()
-        .toLowerCase();
-
-      return name !== 'management';
-    })
+    .filter((employee) => !isManagementRole(employee.role))
     .sort((a, b) => {
       const gamesDifference = Number(b.totalGames) - Number(a.totalGames);
       if (gamesDifference !== 0) return gamesDifference;

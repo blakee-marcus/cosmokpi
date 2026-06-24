@@ -201,32 +201,9 @@ function drawMetricValue(
   fillTextCentered(context, value, chipX + 20, chipY, chipWidth - 20, chipHeight);
 }
 
-export function isManagementRole(role: string | number | undefined) {
-  const normalizedRole = String(role ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+import { isManagementRole } from './roles';
 
-  const managementRoles = new Set([
-    'manager',
-    'management',
-    'general manager',
-    'assistant manager',
-    'gm',
-    'gmit',
-    'am',
-    'amit',
-  ]);
-
-  if (managementRoles.has(normalizedRole)) return true;
-
-  return (
-    normalizedRole.includes('general manager') ||
-    normalizedRole.includes('assistant manager') ||
-    normalizedRole.includes('manager in training') ||
-    normalizedRole.includes('management')
-  );
-}
+export { isManagementRole };
 
 export function getFrontlineNewsletterRows(week: StoredWeek) {
   return getNewsletterRows(week).filter((employee) => !isManagementRole(employee.role));
