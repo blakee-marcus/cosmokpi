@@ -373,3 +373,41 @@ Known remaining risks:
 - Browser smoke verifies the copy interaction and status with fake data, but it is not comprehensive visual regression coverage.
 - Clipboard availability can vary by browser permission and context; failure is handled visibly, but the app does not provide a separate manual text box.
 - Copy selection is deterministic from current coaching signals; future product work may let managers choose the focus manually.
+
+## Sprint 12 Verification
+
+Sprint 12 makes the FLNL export brand-aligned and adds summary cards between the goals strip and the KPI table. Management roles are now excluded from the coaching section, ranked table, and export rows using a shared `isManagementRole()` predicate.
+
+Changed behavior:
+
+- `isManagementRole()` in `lib/dashboard/roles.ts` detects management roles (`Management`, `General Manager`, `Assistant Manager`, `GM`, `GMIT`, `AM`, `AMIT`, and case-insensitive variants).
+- Management members are excluded from Celebrate, Encourage, Coach, Follow-up, ranked table, and FLNL export rows.
+- Store-level KPI totals remain unchanged; management exclusion applies only to per-employee views.
+- The FLNL export canvas draws 4 summary cards (biggest win, biggest focus, games hosted, guests served) using `getSummaryData()` and `getStoreKpiRates`.
+- The `ExportSummaryData` type is exported for reuse.
+- Copy action plan from Sprint 11 remains functional.
+
+Privacy review:
+
+- No real CSV files, real employee names, real KPI values, secrets, URLs, or production identifiers were added.
+- Employee KPI data remains local to the browser.
+- No auth, database, cloud sync, server storage, new services, or external data calls were added.
+
+Tests added or updated:
+
+- `lib/dashboard/roles.test.ts`: 4 tests for `isManagementRole()` predicate.
+- `lib/dashboard/coaching.test.ts`: management exclusion in coaching eligibility and section output.
+- `lib/dashboard/table.test.ts`: management exclusion in ranked table rows.
+- `lib/dashboard/newsletter-export.test.ts`: summary data computation and role-based filtering.
+
+Verification run on June 30, 2026:
+
+- `npm run test`: passed, 13 files and 71 tests.
+- `npm run check`: passed, including lint, typecheck, and production build.
+- Pushed to `origin/main`: commit `8f80a14`.
+
+Known remaining risks:
+
+- Browser smoke covers the upload-to-dashboard path but does not visually verify the canvas export output.
+- Management role detection uses string matching; new role variants would need to be added to `MANAGEMENT_ROLE_LABELS`.
+- The Node 26 deprecation warning for `module.register()` is an upstream Tailwind artifact and does not affect the supported Node 22 runtime.
